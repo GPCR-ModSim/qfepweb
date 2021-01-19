@@ -1,0 +1,12 @@
+*.[oa]
+~
+*.pyc
+*.log
+env
+bin
+obj
+lib
+.DS_Store
+*._.DS_Store
+.idea
+.vscode
