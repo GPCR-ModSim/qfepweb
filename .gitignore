@@ -10,3 +10,5 @@ lib
 *._.DS_Store
 .idea
 .vscode
+
+pyvenv.cfg
