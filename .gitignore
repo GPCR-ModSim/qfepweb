@@ -8,7 +8,9 @@ obj
 lib
 .DS_Store
 *._.DS_Store
+.env
 .idea
 .vscode
 
 pyvenv.cfg
+db.sqlite3

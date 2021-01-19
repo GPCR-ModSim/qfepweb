@@ -23,7 +23,13 @@ Load it with `source bin/postactivate`
   $ cd qfepweb
   $ pip install -r requirements_devel.txt
 
+Create a file called `.env` and add the following lines. **Never commit this
+file**
+
+  DEBUG=on  # or off, for production
+  SECRET_KEY=somegoodrandomstring_atleast50length
+  # e.g. )Ql?ddAC3jMTybSHe^(vk@Sd=nTF#q&S5_:f$:U8O27^cr5S
+
 If everything went smoothly, we could check Django testing page with:
 
   $ django-admin runserver
-
