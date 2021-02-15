@@ -18,4 +18,7 @@ class Home(TestCase):
 
         assert page.status_code == 200
 
-        self.fail("Show the form here")
+    def test_the_form_is_shown(self):
+        page = self.client.get(reverse('runner:index'))
+
+        assert "QligFEP" in page.content.decode()
