@@ -9,12 +9,15 @@ class Runner(models.Model):
     S_C = "S_C"
     A14 = "A14"
     C36 = "C36"
+    C22 = "C22"
+    C_T = "C_T"
     FORCEFIELD_CHOICES = (
         (O15, "OPLS 2015"),
         (O05, "OPLS 2005"),
         (S_C, "SIDECHAIN"),
         (A14, "AMBER14sb"),
-        (C36, "CHARMM36"))
+        (C36, "CHARMM36"),
+        (C22, "CHARMM Test"))
 
     LIN = "LIN"
     SIG = "SIG"
@@ -38,15 +41,16 @@ class Runner(models.Model):
     HAL = "H"
     START_CHOICES = (
         (ONE, "Start in the endpoint"),
-        (HAL, "Start in the middle, recommended for dual"))
+        (HAL, "Start in the middle"))
 
     uuid = models.UUIDField(
         primary_key=True, default=uuid.uuid4, editable=False)
-    mutation = models.CharField(max_length=10, blank=True)
     forcefield = models.CharField(
         max_length=3, choices=FORCEFIELD_CHOICES, default=O15)
     sampling = models.CharField(
         max_length=3, choices=SAMPLING_CHOICES, default=LIN)
+    # Cysbond is something like 20:150
+    cysbond = models.CharField(max_length=16, blank=True)
     windows = models.PositiveIntegerField(default=1)
     system = models.CharField(
         max_length=3, choices=SYSTEM_CHOICES, default=PRO)
@@ -54,9 +58,9 @@ class Runner(models.Model):
     # validators as such
     temperatures = models.CharField(max_length=255, blank=True)
     replicates = models.PositiveIntegerField(default=1)
-    dual = models.BooleanField(default=False)
     start = models.CharField(
         max_length=3, choices=START_CHOICES, default=ONE)
+    sphere_radius = models.PositiveIntegerField(default=15)
 
     def __str__(self):
         """Return a proper string for the model."""

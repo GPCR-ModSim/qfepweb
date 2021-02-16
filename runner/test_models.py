@@ -10,11 +10,12 @@ class RunnerModel(TestCase):
         assert str(self.runner) == f'Run {self.runner.uuid}'
 
     def test_models_fields(self):
-        assert self.runner.mutation == ""
+        assert self.runner.forcefield
         assert self.runner.sampling
+        assert self.runner.cysbond == ""
         assert self.runner.windows
         assert self.runner.system
         assert self.runner.temperatures == ""
         assert self.runner.replicates
-        assert self.runner.dual == False
         assert self.runner.start
+        assert self.runner.sphere_radius

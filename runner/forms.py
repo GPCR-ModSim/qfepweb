@@ -15,10 +15,9 @@ class RunnerForm(ModelForm):
     class Meta:
         """Set the basic config for the form."""
         model = Runner
-        fields = ["mutation", "forcefield", "sampling", "windows", "system",
-                  "temperatures", "replicates", "dual", "start"]
+        fields = ["forcefield", "sampling", "cysbond", "windows", "system",
+                  "temperatures", "replicates", "start", "sphere_radius"]
 
         help_texts = {
-            "mutation": "The desired mutation given as Wild-ResN-Mut, "
-                "e.g. Y197A. ResN is taken from original .pdb"}
-
+            "forcefield": "The Forcefield to be used",
+        }

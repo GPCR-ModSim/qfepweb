@@ -23,8 +23,8 @@ class Home(TestCase):
         """The basic input form is rendered in the home page."""
         page = self.client.get(reverse('runner:index')).content.decode()
 
-        form_fields = ["mutation", "forcefield", "sampling", "windows",
-                       "system", "temperatures", "replicates", "dual", "start"]
+        form_fields = ["forcefield", "sampling", "cysbond", "windows", "system",
+                       "temperatures", "replicates", "start", "sphere_radius"]
 
         for name in form_fields:
             assert f'div id="div_id_{name}"' in page
