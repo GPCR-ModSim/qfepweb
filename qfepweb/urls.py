@@ -1,4 +1,4 @@
-"""sample2 URL Configuration
+"""qfepweb URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/3.1/topics/http/urls/
@@ -20,6 +20,7 @@ from django.urls import include, path
 
 
 urlpatterns = [
+    path('', include('home.urls')),
     path('admin/', admin.site.urls),
     path('r/', include('runner.urls')),
     path('u/', include('utils.urls')),
