@@ -1,0 +1,44 @@
+{% load static i18n %}
+
+<div class="m-b-1" style="margin-bottom: 10px">
+ <nav class="navbar navbar-expand-md navbar-light bg-light">
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
+   <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <a class="navbar-brand" href="/">
+   <img src="{% static 'img/QfepWeb.0.svg' %}" width="50" height="30" alt="">
+  </a>
+
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+   <ul class="navbar-nav ml-auto text-right">
+    <li class="nav-item dropdown">
+     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Prepare</a>
+     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+      <a class="dropdown-item" href="{% url 'runner:qligfep' %}">Ligand</a>
+      <a class="dropdown-item" href="#">Protein</a>
+     </div>
+    </li>
+
+    <li class="nav-item dropdown">
+     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">FEP</a>
+     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+      <a class="dropdown-item" href="{% url 'runner:qligfep' %}">QligFEP</a>
+      <a class="dropdown-item" href="#">QresFEP</a>
+     </div>
+    </li>
+
+    <li class="nav-item">
+     <a class="nav-link " href="#">LIE</a>
+    </li>
+    <li class="nav-item">
+     <a class="nav-link" href="#footer">About</a>
+      {# <a class="nav-link" href="{% url 'utils:about' %}">About</a> #}
+    </li>
+
+    {% include "nav_auth.html" %}
+   </ul>
+  </div>
+ </nav>
+</div>
+
