@@ -4,7 +4,7 @@ from django.urls import reverse
 
 
 class Home(TestCase):
-    """Test the landing page.
+    """Test the landing of the runner pages.
 
     It should be available to everyone, without account, and a brief
     introdution to what the server does.
@@ -14,14 +14,14 @@ class Home(TestCase):
         pass
 
     def test_the_home_is_available(self):
-        page = self.client.get(reverse('runner:index'))
+        page = self.client.get(reverse('runner:qligfep'))
 
         assert page.status_code == 200
         assert "QligFEP" in page.content.decode()  # The title
 
     def test_the_form_is_shown(self):
         """The basic input form is rendered in the home page."""
-        page = self.client.get(reverse('runner:index')).content.decode()
+        page = self.client.get(reverse('runner:qligfep')).content.decode()
 
         form_fields = ["forcefield", "sampling", "cysbond", "windows", "system",
                        "temperatures", "replicates", "start", "sphere_radius"]

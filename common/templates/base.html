@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <title>{% block title %}QligFEP{% endblock %}</title>
+    <title>{% block title %}{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="X. Bello">
@@ -38,7 +38,7 @@
                         Prepare
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <a class="dropdown-item" href="{% url 'runner:index' %}">Ligand</a>
+                        <a class="dropdown-item" href="{% url 'runner:qligfep' %}">Ligand</a>
                         <a class="dropdown-item" href="#">Protein</a>
                     </div>
                 </li>
@@ -48,7 +48,7 @@
                         FEP
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <a class="dropdown-item" href="{% url 'runner:index' %}">QligFEP</a>
+                        <a class="dropdown-item" href="{% url 'runner:qligfep' %}">QligFEP</a>
                         <a class="dropdown-item" href="#">QresFEP</a>
                     </div>
                 </li>
