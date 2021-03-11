@@ -9,10 +9,18 @@
   <meta name="description" content="">
   <meta name="author" content="X. Bello">
 
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/apple-touch-icon_v1.png' %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32x32_v1.png' %}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/favicon-16x16_v1.png' %}">
+  <link rel="manifest" href="{% static 'img/site.webmanifest' %}">
+  <link rel="mask-icon" href="{% static 'img/safari-pinned-tab_v1.svg' %}" color="#1976b9">
+  <meta name="msapplication-TileColor" content="#2d89ef">
+  <meta name="theme-color" content="#ffffff">
+
   {% block css %}
    <!-- Latest compiled and minified Bootstrap 4.1.1 CSS -->
-   <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+   <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
 
    <!-- Your stuff: Third-party CSS libraries go here -->
   {% endblock %}
