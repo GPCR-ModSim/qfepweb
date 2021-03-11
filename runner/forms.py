@@ -1,4 +1,6 @@
 from crispy_forms.helper import FormHelper
+from crispy_forms.layout import (ButtonHolder, Div, Fieldset, Layout, Submit,
+                                 Reset)
 from django.forms import ModelForm
 
 from runner.models import Runner
@@ -18,6 +20,30 @@ class RunnerForm(ModelForm):
 
         self.fields["cysbond"].widget.attrs["placeholder"] = "e.g. 1:99,35:150"
         self.fields["temperatures"].widget.attrs["placeholder"] = "e.g. 298,300"
+
+        self.helper.layout = Layout(
+            Fieldset(
+                "Q Ligand FEP run parameters",
+                Div(
+                    Div("forcefield", css_class="col-sm-6"),
+                    Div("sampling", css_class="col-sm-6"),
+                    css_class="row"),
+                Div(
+                   Div("cysbond",  css_class="col-sm-6"),
+                   Div("windows", css_class="col-sm-6"),
+                   css_class="row"),
+                Div(
+                   Div("system", css_class="col-sm-6"),
+                   Div("temperatures", css_class="col-sm-6"),
+                   css_class="row"),
+                Div(
+                   Div("replicates", css_class="col-sm-4"),
+                   Div("start", css_class="col-sm-4"),
+                   Div("sphere_radius", css_class="col-sm-4"),
+                   css_class="row")),
+            ButtonHolder(
+                Submit("submit", "Submit"),
+                Reset("reset", "Reset")))
 
     class Meta:
         """Set the basic config for the form."""
