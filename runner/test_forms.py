@@ -1,9 +1,19 @@
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from runner import forms
 
 
 class RunnerFormT(TestCase):
     """Test the Runner Input Form."""
+    def setUp(self):
+        self.form_data = {"forcefield": "O15",
+                          "sampling": "LIN",
+                          "windows": 10,
+                          "system": "WAT",
+                          "replicates": 1,
+                          "start": "E",
+                          "sphere_radius": 15}
+
     def test_form_is_a_modelform(self):
         """The form autoloads fields from the model."""
         form = forms.RunnerForm()
@@ -32,3 +42,36 @@ class RunnerFormT(TestCase):
 
         assert "e.g. 1:99,35:150" in renderedForm
         assert "e.g. 298,300" in renderedForm
+
+    def test_minimal_valid_form(self):
+        form = forms.RunnerForm(data=self.form_data)
+
+        assert form.is_valid(), form.errors
+
+    def test_cys_validation(self):
+        self.form_data["cysbond"] = "1:99,35:150"
+
+        form = forms.RunnerForm(data=self.form_data)
+
+        assert form.is_valid(), form.errors
+
+        invalid_inputs = ["0", "-1", "1", "1:99,", "A", "1:99,35",
+                          "1:99,35:150,", "0:39", "35:15", "15,15"]
+
+        for cys_value in invalid_inputs:
+            self.form_data["cysbond"] = cys_value
+            form = forms.RunnerForm(data=self.form_data)
+            assert not form.is_valid(), "Should be invalid: {cys_value}"
+
+    def test_temperatures_validation(self):
+        self.form_data["temperatures"] = "298,300"
+        form = forms.RunnerForm(data=self.form_data)
+
+        assert form.is_valid(), form.errors
+
+        invalid_inputs = ["A", "-1", "298:300", "-1,298"]
+
+        for temp_value in invalid_inputs:
+            self.form_data["temperatures"] = temp_value
+            form = forms.RunnerForm(data=self.form_data)
+            assert not form.is_valid(), f"Should be invalid: {temp_value}"

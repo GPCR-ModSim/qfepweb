@@ -1,6 +1,8 @@
 import uuid
 from django.db import models
 
+from . import validators
+
 
 class Runner(models.Model):
     """A model to hold each launch/run parameters."""
@@ -49,14 +51,14 @@ class Runner(models.Model):
         max_length=3, choices=FORCEFIELD_CHOICES, default=O15)
     sampling = models.CharField(
         max_length=3, choices=SAMPLING_CHOICES, default=LIN)
-    # Cysbond is something like 20:150
-    cysbond = models.CharField(max_length=16, blank=True)
+    # Cysbond is something like 20:150,45:187
+    cysbond = models.CharField(max_length=128, blank=True,
+                               validators=[validators.validate_cysbond])
     windows = models.PositiveIntegerField(default=1)
     system = models.CharField(
         max_length=3, choices=SYSTEM_CHOICES, default=PRO)
-    # WARNING: the following field is a list field and should include
-    # validators as such
-    temperatures = models.CharField(max_length=255, blank=True)
+    temperatures = models.CharField(max_length=255, blank=True,
+                                    validators=[validators.validate_temps])
     replicates = models.PositiveIntegerField(default=1)
     start = models.CharField(
         max_length=3, choices=START_CHOICES, default=ONE)

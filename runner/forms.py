@@ -2,6 +2,7 @@ from crispy_forms.helper import FormHelper
 from django.forms import ModelForm
 
 from runner.models import Runner
+from runner import validators
 
 
 class RunnerForm(ModelForm):
@@ -11,6 +12,9 @@ class RunnerForm(ModelForm):
 
         self.helper = FormHelper()
         self.helper.form_action = ''
+
+        self.fields["cysbond"].validators.append(validators.validate_cysbond)
+        self.fields["temperatures"].validators.append(validators.validate_temps)
 
         self.fields["cysbond"].widget.attrs["placeholder"] = "e.g. 1:99,35:150"
         self.fields["temperatures"].widget.attrs["placeholder"] = "e.g. 298,300"
@@ -32,4 +36,3 @@ class RunnerForm(ModelForm):
             "sampling": "Lambda spacing type to be used",
             "windows": "Total number of windows to run",
         }
-
