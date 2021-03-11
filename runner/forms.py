@@ -12,6 +12,9 @@ class RunnerForm(ModelForm):
         self.helper = FormHelper()
         self.helper.form_action = ''
 
+        self.fields["cysbond"].widget.attrs["placeholder"] = "e.g. 1:99,35:150"
+        self.fields["temperatures"].widget.attrs["placeholder"] = "e.g. 298,300"
+
     class Meta:
         """Set the basic config for the form."""
         model = Runner
@@ -29,3 +32,4 @@ class RunnerForm(ModelForm):
             "sampling": "Lambda spacing type to be used",
             "windows": "Total number of windows to run",
         }
+

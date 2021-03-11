@@ -26,3 +26,9 @@ class RunnerFormT(TestCase):
         assert "Lambda spacing type to be used" in renderedForm
         assert "Total number of windows to run" in renderedForm
 
+    def test_form_help_textholders(self):
+        form = forms.RunnerForm()
+        renderedForm = form.as_p()
+
+        assert "e.g. 1:99,35:150" in renderedForm
+        assert "e.g. 298,300" in renderedForm
