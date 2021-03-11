@@ -20,4 +20,12 @@ class RunnerForm(ModelForm):
 
         help_texts = {
             "forcefield": "The Forcefield to be used",
+            "system": "What type of system we are setting up",
+            "sphere_radius": "Size of the simulation sphere, in UNITS",  # FIXME
+            "cysbond": "Add CYS-bonds as at1:at2,at3:at4",
+            "start": "Starting FEP in the middle or endpoint",
+            "temperatures": "Temperature(s), separated by commas",
+            "replicates": "The number of repeats to run",
+            "sampling": "Lambda spacing type to be used",
+            "windows": "Total number of windows to run",
         }
