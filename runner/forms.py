@@ -42,7 +42,7 @@ class RunnerForm(ModelForm):
                    Div("sphere_radius", css_class="col-sm-4"),
                    css_class="row")),
             ButtonHolder(
-                Submit("submit", "Submit"),
+                Submit("submit", "Submit", css_class="bg-cp1"),
                 Reset("reset", "Reset")))
 
     class Meta:
