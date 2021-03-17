@@ -3,12 +3,22 @@
 {% block title %}About{% endblock %}
 
 {% block content %}
- {% for person in object_list %}
-  <div class="people-card col-lg-6 col-sm-12 p-3 position-relative">
-   <img src="{{ person.picture.url }}" class="float-left p-1 rounded-circle" />
-   <a href="{{ person.get_absolute_url }}" class="stretched-link text-decoration-none"></a>
-   <strong>{{ person.name }}</strong><br />
-   {{ person.position }}
+ <div class="container">
+  <div class="row p-3">
+   {% for person in object_list %}
+    <div class="person-card col-lg-6 col-sm-12 p-3 position-relative">
+     <a href="{{ person.get_absolute_url }}" class="stretched-link text-decoration-none"></a>
+     <div class="row">
+      <div class="col-2">
+       <img src="{{ person.picture.url }}" class="person-pic float-left p-1 rounded-circle" />
+      </div>
+      <div class="col-10">
+       <strong>{{ person.name }}</strong><br />
+       <i>{{ person.position }}</i>
+      </div>
+     </div>
+    </div>
+   {% endfor %}
   </div>
- {% endfor %}
+ </div>
 {% endblock content %}

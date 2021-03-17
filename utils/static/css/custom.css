@@ -12,6 +12,13 @@
 	color: #B53302 !important;
 	border-color: #B53302 !important;
 }
+.person-card:hover {
+        background-color: #FFC314;
+}
+.person-pic {
+	max-width: 48px;
+	height: 100%;
+}
 /* From paletton.com */
 /* Use this colors as a reference, or directly through classes */
 .color-primary-0 { color: #1977B9 }	/* Main Primary color (blueish) */
