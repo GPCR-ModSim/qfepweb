@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}{{ object.name }}{% endblock %}
+
+
+{% block content %}
+ <div class="container">
+  <div class="row pt-2">
+   <div class="col-2">
+    <img src="{{ object.picture.url }}" class="person-big-pic float-left rounded-circle" />
+   </div>
+   <div class="col-10">
+    <h1>{{ object.name }}</h1>
+    <p>
+     <i>{{ object.position }}</i><br />
+     {{ object.description }}<br />
+     <a href="{{ object.url }}" target="_blank">more&hellip;</a>
+    </p>
+   </div>
+  </div>
+ </div>
+{% endblock content %}

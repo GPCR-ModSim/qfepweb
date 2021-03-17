@@ -7,12 +7,13 @@ from model_bakery import baker
 from .models import Person
 
 
-class Home(TestCase):
+class About(TestCase):
     """Test the about page"""
 
     def setUp(self):
         self.people = []
 
+        self.people.append(baker.make("Person", _create_files=True))
         self.people.append(baker.make("Person", _create_files=True))
 
     def tearDown(self):
@@ -48,7 +49,21 @@ class Home(TestCase):
 
         content = page.content.decode()
 
-        assert self.people[0].name in content
-        assert self.people[0].get_absolute_url() in content
-        assert self.people[0].picture.url in content
-        assert self.people[0].position in content
+        for p in self.people:
+            assert p.name in content
+            assert p.get_absolute_url() in content
+            assert p.picture.url in content
+            assert p.position in content
+
+    def test_person_individual_pages(self):
+        for p in self.people:
+            with self.assertTemplateUsed("upper_navbar.html"):
+                page = self.client.get(
+                    reverse("about:person_detail",
+                            kwargs={"pk": p.id, "name": p.name}))
+            content = page.content.decode()
+            assert p.name in content
+            assert p.picture.url in content
+            assert p.position in content
+            assert p.description in content
+            assert p.url in content

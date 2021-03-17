@@ -16,8 +16,12 @@
         background-color: #FFC314;
 }
 .person-pic {
-	max-width: 48px;
-	height: 100%;
+	max-width: 100%;
+	max-height: 48px;
+}
+.person-big-pic {
+	max-width: 100%;
+	max-height: 100px;
 }
 /* From paletton.com */
 /* Use this colors as a reference, or directly through classes */
