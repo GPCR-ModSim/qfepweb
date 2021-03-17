@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}About{% endblock %}
+
+{% block content %}
+ {% for person in object_list %}
+  <div class="people-card col-lg-6 col-sm-12 p-3 position-relative">
+   <img src="{{ person.picture.url }}" class="float-left p-1 rounded-circle" />
+   <a href="{{ person.get_absolute_url }}" class="stretched-link text-decoration-none"></a>
+   <strong>{{ person.name }}</strong><br />
+   {{ person.position }}
+  </div>
+ {% endfor %}
+{% endblock content %}
