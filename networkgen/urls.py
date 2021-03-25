@@ -6,5 +6,5 @@ app_name = "networkgen"
 
 urlpatterns = [
     path('', v.NetworkGen.as_view(), name='index'),
-    path('', v.NetworkData.as_view(), name='data')
+    path('data/graph.json', v.NetworkData.as_view(), name='data')
 ]

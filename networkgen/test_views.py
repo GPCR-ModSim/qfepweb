@@ -35,8 +35,11 @@ class NetworkGen(TestCase):
         """Right now the json data is a plain file. In the future it might be
         a file generated from some dynamic data."""
 
-        page = self.client.get(reverse('networkgen:data')).content.decode()
+        resp = self.client.get(reverse('networkgen:data'))
+        page = resp.content.decode()
+
+        assert resp["Content-Type"] == "application/json; charset=utf-8"
 
         jsonData = json.loads(page)
 
-        self.fail(jsonData)
+        assert list(jsonData.keys()) == ['nodes', 'edges']
