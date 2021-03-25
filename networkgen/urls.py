@@ -1,3 +1,9 @@
+from django.urls import path
+from . import views as v
+
+
 app_name = "networkgen"
 
-urlpatterns = []
+urlpatterns = [
+    path('', v.NetworkGen.as_view(), name='index')
+]
