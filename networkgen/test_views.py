@@ -1,4 +1,5 @@
 """The basic views for this project."""
+import json
 from django.test import TestCase
 from django.urls import reverse
 
@@ -29,3 +30,13 @@ class NetworkGen(TestCase):
 
         for asset in requiredJs + requiredCss:
          assert asset in page
+
+    def test_the_serving_of_Json_data(self):
+        """Right now the json data is a plain file. In the future it might be
+        a file generated from some dynamic data."""
+
+        page = self.client.get(reverse('networkgen:data')).content.decode()
+
+        jsonData = json.loads(page)
+
+        self.fail(jsonData)
