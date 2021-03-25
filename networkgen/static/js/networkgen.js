@@ -8,8 +8,6 @@ function destroy() {
 ////////////////////////////////////////
 // VISJS functions
 ////////////////////////////////////////
-
-
 function draw() {
   destroy();
   nodes = [];
@@ -132,9 +130,6 @@ var data = {
   nodes: nodes,
   edges: edges
 };
-
-
-
 
 ////////////////////////////////////////
 // undo/redo functions
