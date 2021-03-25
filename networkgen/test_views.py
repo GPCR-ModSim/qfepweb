@@ -19,12 +19,12 @@ class NetworkGen(TestCase):
         assert page.status_code == 200
         assert "FEP Network" in page.content.decode()  # The title
 
-    def test_the_form_is_shown(self):
-        """The basic input form is rendered in the home page."""
-        page = self.client.get(reverse('runner:qligfep')).content.decode()
+    def test_the_javascript_and_css_is_included(self):
+        page = self.client.get(reverse('networkgen:index')).content.decode()
 
-        form_fields = ["forcefield", "sampling", "cysbond", "windows", "system",
-                       "temperatures", "replicates", "start", "sphere_radius"]
+        # There are proxies to identify the static assets needed
+        requiredJs = ["lodash.min.js", "vis.js"]
+        requiredCss = ["vis-network.min.css", "use.fontawesome.com"]
 
-        for name in form_fields:
-            assert f'div id="div_id_{name}"' in page
+        for asset in requiredJs + requiredCss:
+         assert asset in page
