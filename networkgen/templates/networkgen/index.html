@@ -3,6 +3,11 @@
 
 {% block title %}FEP Network{% endblock %}
 
+{% block headjs %}
+ {{ block.super }}
+ <script src="{% static 'js/networkgen.js' %}">
+{% endblock %}
+
 {% block css %}
  {{ block.super }}
  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis-network.min.css" />
@@ -14,5 +19,8 @@
  {{ block.super }}
  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.js"></script>
  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.5/lodash.min.js"></script>
- <script defer src="{% static 'js/networkgen.js' %}">
+{% endblock %}
+
+{% block content %}
+ <script>window.onload=draw();</script>
 {% endblock %}

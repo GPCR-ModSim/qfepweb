@@ -17,6 +17,10 @@
   <meta name="msapplication-TileColor" content="#2d89ef">
   <meta name="theme-color" content="#ffffff">
 
+  {% block headjs %}
+   <script src="{% static 'js/jquery-3.6.0.min.js' %}"></script>
+  {% endblock %}
+
   {% block css %}
    <!-- Latest compiled and minified Bootstrap 4.1.1 CSS -->
    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
@@ -54,7 +58,6 @@
   {% block javascript %}
    <!-- Required by Bootstrap v4.1.1 -->
    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
-   <script defer src="{% static 'js/jquery-3.5.1.slim.min.js' %}"></script>
    <script defer src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
 
    <!-- Your stuff: Third-party javascript libraries go here -->
