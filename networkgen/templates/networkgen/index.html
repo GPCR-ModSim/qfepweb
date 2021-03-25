@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}FEP Network{% endblock %}
 
@@ -6,10 +7,12 @@
  {{ block.super }}
  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis-network.min.css" />
  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" />
+ <link rel="stylesheet" href="{% static 'css/networkgen.css' %}">
 {% endblock %}
 
 {% block javascript %}
  {{ block.super }}
  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.js"></script>
  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.5/lodash.min.js"></script>
+ <script defer src="{% static 'js/networkgen.js' %}">
 {% endblock %}

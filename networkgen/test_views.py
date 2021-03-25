@@ -23,8 +23,9 @@ class NetworkGen(TestCase):
         page = self.client.get(reverse('networkgen:index')).content.decode()
 
         # There are proxies to identify the static assets needed
-        requiredJs = ["lodash.min.js", "vis.js"]
-        requiredCss = ["vis-network.min.css", "use.fontawesome.com"]
+        requiredJs = ["lodash.min.js", "vis.js", "networkgen.js"]
+        requiredCss = ["vis-network.min.css", "use.fontawesome.com",
+                       "networkgen.css"]
 
         for asset in requiredJs + requiredCss:
          assert asset in page
