@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'about',
     'common',
     'home',
+    'networkgen',
     'runner',
     'utils',
 ]
