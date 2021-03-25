@@ -18,34 +18,35 @@ function draw() {
   var options = {
   // ------------------------------------
   // GENERAL
-  nodes: {
-  // could also make write PNGs as circular images, then set shape : image and omit size: n.
-  // probably should do this. node clicking is inconsistent currently.
-  //shape: "image",
-  borderWidth: 1,
-  shape: "image",
-  shapeProperties: {
+   "nodes": {
+   // could also make write PNGs as circular images, then set shape : image and omit size: n.
+   // probably should do this. node clicking is inconsistent currently.
+   //shape: "image",
+    borderWidth: 1,
+    shape: "image",
+    shapeProperties: {
      useBorderWithImage : true
-  },
-  size: 120,
-  font : {
-    size : 30,
-    color : 'blue'
-  },
-  color: {
-    border: "#222222",
-    background: "white",
-    highlight: {
-        border: '#2B7CE9',
-        background: "white"
-        }
-  }},
-  "edges": {
+    },
+    size: 120,
+    font : {
+     size : 30,
+     color : 'blue'
+    },
+    color: {
+      border: "#222222",
+      background: "white",
+      highlight: {
+       border: '#2B7CE9',
+       background: "white"
+      }
+    }
+   },
+   "edges": {
     "smooth": false
-  },
-  // ------------------------------------
-  // PHYSICS
-  "physics": {
+   },
+   // ------------------------------------
+   // PHYSICS
+   "physics": {
     "hierarchicalRepulsion": {
       "centralGravity": 0,
       "springLength": 0.3,
@@ -55,45 +56,43 @@ function draw() {
     "minVelocity": 0.76,
     "solver": "hierarchicalRepulsion",
     "timestep": 0.7
-  },
-  // ------------------------------------
-  // MANIPULATION
-  manipulation: {
+   },
+   // ------------------------------------
+   // MANIPULATION
+   manipulation: {
     addNode : false,
     addEdge: function (data, callback) {
-          console.log('add edge', data);
-          // empty if statement removes add edge to self funtionality.
-          if (data.from == data.to) {
-//              var r = confirm("Do you want to connect the node to itself?");
-//              if (r === true) {
-//                  callback(data);
-//              }
-          }
-          else {
-              callback(data);
-          }
-      }
+     console.log('add edge', data);
+     // empty if statement removes add edge to self funtionality.
+     if (data.from == data.to) {
+      // var r = confirm("Do you want to connect the node to itself?");
+      // if (r === true) {
+      //  callback(data);
+      // }
+     } else {
+      callback(data);
+     }
+    }
+  },
+  "interaction": {
+   hover: true,
   }
-  };
+ };
 
-
-
-  network = new vis.Network(container, data, options);
-  // disable physics after loading: https://stackoverflow.com/questions/32403578/stop-vis-js-physics-after-nodes-load-but-allow-drag-able-nodes
-  network.on("stabilizationIterationsDone", function () {
-        network.setOptions( { physics: false } );
-    });
+ network = new vis.Network(container, data, options);
+ // disable physics after loading: https://stackoverflow.com/questions/32403578/stop-vis-js-physics-after-nodes-load-but-allow-drag-able-nodes
+ network.on("stabilizationIterationsDone", function () {
+  network.setOptions( { physics: false } );
+ });
+ network.on("selectNode", function(ev){
+  $("#network-popup").modal("show");
+  $("h5.modal-title").text(ev.nodes[0]);
+ });
 }
-
-
-
-
-
 
 function clearPopUp() {
   document.getElementById("saveButton").onclick = null;
   document.getElementById("cancelButton").onclick = null;
-  document.getElementById("network-popUp").style.display = "none";
 }
 
 function cancelEdit(callback) {
@@ -159,14 +158,14 @@ function change_history_back() {
   css_for_undo_redo_chnage();
 }
 function redo_css_active() {
-  $("#button_undo").css({
+  $("#btn-undo").css({
     "background-color": "inherit",
     color: "#878787",
     cursor: "pointer"
   });
 };
 function undo_css_active() {
-  $("#button_redo").css({
+  $("#btn-redo").css({
     "background-color": "inherit",
     color: "#878787",
     cursor: "pointer"
@@ -174,15 +173,15 @@ function undo_css_active() {
 };
 
 function redo_css_inactive() {
-  $("#button_undo").css({
-    "ackground-color": "inherit",
+  $("#btn_undo").css({
+    "background-color": "inherit",
     color: "#EBEBEB",
     cursor: "inherit"
   });
 };
 
 function undo_css_inactive() {
-  $("#button_redo").css({
+  $("#btn-redo").css({
     "background-color": "inherit",
     color: "#EBEBEB",
     cursor: "inherit"
@@ -207,7 +206,7 @@ $(document).ready(function() {
   css_for_undo_redo_chnage();
 });
 
-$("#button_undo").on("click", function() {
+$("#btn_undo").on("click", function() {
   if (history_list_back.length > 1) {
     const current_nodes = data.nodes.get(data.nodes.getIds());
     const current_edges = data.edges.get(data.edges.getIds());
@@ -252,7 +251,7 @@ $("#button_undo").on("click", function() {
   }
 });
 
-$("#button_redo").on("click", function() {
+$("#btn_redo").on("click", function() {
   if (history_list_forward.length > 0) {
     const current_nodes = data.nodes.get(data.nodes.getIds());
     const current_edges = data.edges.get(data.edges.getIds());

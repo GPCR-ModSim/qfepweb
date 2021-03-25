@@ -43,3 +43,12 @@ class NetworkGen(TestCase):
         jsonData = json.loads(page)
 
         assert list(jsonData.keys()) == ['nodes', 'edges']
+
+    def test_network_edit_buttons_are_visible(self):
+        expected_buttons = ["btn-undo", "btn-redo", "saveButton",
+                            "cancelButton"]
+
+        page = self.client.get(reverse('networkgen:index')).content.decode()
+
+        for btn in expected_buttons:
+            assert btn in page
