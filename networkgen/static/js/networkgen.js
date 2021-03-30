@@ -155,7 +155,7 @@ function change_history_back() {
   //reset forward history
   history_list_forward = [];
   // apply css
-  css_for_undo_redo_chnage();
+  css_for_undo_redo_change();
 }
 function redo_css_active() {
   $("#btn-undo").css({
@@ -173,7 +173,7 @@ function undo_css_active() {
 };
 
 function redo_css_inactive() {
-  $("#btn_undo").css({
+  $("#btn-undo").css({
     "background-color": "inherit",
     color: "#EBEBEB",
     cursor: "inherit"
@@ -188,7 +188,7 @@ function undo_css_inactive() {
   });
 };
 
-function css_for_undo_redo_chnage() {
+function css_for_undo_redo_change() {
   if (history_list_back.length === 1) {
     redo_css_inactive();
   } else {
@@ -201,12 +201,7 @@ function css_for_undo_redo_chnage() {
   };
 };
 
-$(document).ready(function() {
-              // apply css
-  css_for_undo_redo_chnage();
-});
-
-$("#btn_undo").on("click", function() {
+function undo(){
   if (history_list_back.length > 1) {
     const current_nodes = data.nodes.get(data.nodes.getIds());
     const current_edges = data.edges.get(data.edges.getIds());
@@ -247,11 +242,11 @@ $("#btn_undo").on("click", function() {
     });
     history_list_back.shift();
             // apply css
-    css_for_undo_redo_chnage();
+    css_for_undo_redo_change();
   }
-});
+};
 
-$("#btn_redo").on("click", function() {
+function redo(){
   if (history_list_forward.length > 0) {
     const current_nodes = data.nodes.get(data.nodes.getIds());
     const current_edges = data.edges.get(data.edges.getIds());
@@ -291,6 +286,13 @@ $("#btn_redo").on("click", function() {
     // history_list_forward
     history_list_forward.shift();
         // apply css
-    css_for_undo_redo_chnage();
+    css_for_undo_redo_change();
   }
+};
+
+$(document).ready(function() {
+              // apply css
+  css_for_undo_redo_change();
+  $("#btn-undo").on("click", undo);
+  $("#btn-redo").on("click", redo)
 });
