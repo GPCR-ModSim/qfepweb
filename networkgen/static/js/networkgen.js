@@ -29,7 +29,7 @@ function draw() {
     },
     size: 120,
     font : {
-     size : 30,
+     size : 40,
      color : 'blue'
     },
     color: {
@@ -42,7 +42,8 @@ function draw() {
     }
    },
    "edges": {
-    "smooth": false
+    "smooth": false,
+    "font": {"size": 30},
    },
    // ------------------------------------
    // PHYSICS
