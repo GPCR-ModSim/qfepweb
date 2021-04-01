@@ -20,8 +20,12 @@ Load it with `source bin/postactivate`
     $ cd qfepweb
     $ pip install -r requirements_devel.txt
 
-Create a file called `.env` and add the following lines. **Never commit this
-file**
+    For the production environment install only this:
+
+    $ pip install -r requirements.txt
+
+Create a file called `.env` besides the `qfebweb/settings.py` file and add the
+following lines. **Never commit this file**
 
     DEBUG=on  # or off, for production
     SECRET_KEY=somegoodrandomstring_atleast50length
