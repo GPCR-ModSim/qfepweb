@@ -85,28 +85,29 @@ function draw() {
  network.on("stabilizationIterationsDone", function () {
   network.setOptions( { physics: false } );
  });
- network.on("selectNode", function(ev){
-  $("#network-popup").modal("show");
-  $("h5.modal-title").text(ev.nodes[0]);
- });
+ 
+ // network.on("selectNode", function(ev){
+ //  $("#network-popup").modal("show");
+ //  $("h5.modal-title").text(ev.nodes[0]);
+ // });
 }
 
-function clearPopUp() {
-  document.getElementById("saveButton").onclick = null;
-  document.getElementById("cancelButton").onclick = null;
-}
+// function clearPopUp() {
+//   document.getElementById("saveButton").onclick = null;
+//   document.getElementById("cancelButton").onclick = null;
+// }
 
-function cancelEdit(callback) {
-  clearPopUp();
-  callback(null);
-}
+// function cancelEdit(callback) {
+//   clearPopUp();
+//   callback(null);
+// }
 
-function saveData(data, callback) {
-  data.id = document.getElementById("node-id").value;
-  data.label = document.getElementById("node-label").value;
-  clearPopUp();
-  callback(data);
-}
+// function saveData(data, callback) {
+//   data.id = document.getElementById("node-id").value;
+//   data.label = document.getElementById("node-label").value;
+//   clearPopUp();
+//   callback(data);
+// }
 
 // Get out JSON data.
 var network = null;
