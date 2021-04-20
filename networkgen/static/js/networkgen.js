@@ -62,6 +62,7 @@ function draw() {
    // MANIPULATION
    manipulation: {
     addNode : false,
+    editEdge : false,
     addEdge: function (data, callback) {
      console.log('add edge', data);
      // empty if statement removes add edge to self funtionality.
@@ -75,8 +76,9 @@ function draw() {
      }
     }
   },
-  "interaction": {
+  interaction: {
    hover: true,
+   multiselect: true
   }
  };
 
@@ -108,6 +110,32 @@ function draw() {
 //   clearPopUp();
 //   callback(data);
 // }
+// SAVE SELECTION BUTTON
+// saves a group of node IDs to a variable. Can be used downstream to look at statistics for the selected group.
+function saveselection(){
+
+  const selNodes = network.getSelectedNodes()
+
+  if (selNodes.length == 0){
+    // catch cases where user has not selected nodes.
+    alert("Please select ligands to save to group.")
+  } else {
+  // require user to insert group name. Repop when no text input. :
+  do{
+    // prompt with string field
+    var groupName = prompt("Enter an identifier for this group, then press OK. Press Cancel\n\
+if you do not want to make a group with molecule(s):\n"+selNodes+".");
+} while(groupName !== null && groupName === "") // the while statement makes the prompt reappear
+// when no string is input.
+
+// if user has provided a name for the group, save the group name and node IDs.
+if (groupName !== null) {
+  console.log(groupName, selNodes)
+  // HERE PROCESS groupName AND selNodes TO NEXT STEP IN WORKFLOW
+  // TODO
+  }}
+
+}
 
 // FINISH BUTTON/
 // reduced version of https://stackoverflow.com/questions/40489700/visjs-save-manipulated-data-to-json
@@ -125,11 +153,6 @@ You can find a list of edges here (hlink).");
   // HERE PROCESS writedata TO NEXT STEP IN WORKFLOW
   // TODO
 };
-
-
-// document.getElementById('extract-positions').addEventListener('click', e => {
-  
-
  
 
 
@@ -319,6 +342,7 @@ function redo(){
 $(document).ready(function() {
               // apply css
   css_for_manipulation();
+  $("#save-sele").on("click", saveselection);
   $("#btn-undo").on("click", undo);
   $("#btn-redo").on("click", redo);
   $("#extract-positions").on("click", savegraph)
