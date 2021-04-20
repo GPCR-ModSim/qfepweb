@@ -85,28 +85,53 @@ function draw() {
  network.on("stabilizationIterationsDone", function () {
   network.setOptions( { physics: false } );
  });
- network.on("selectNode", function(ev){
-  $("#network-popup").modal("show");
-  $("h5.modal-title").text(ev.nodes[0]);
- });
+
+ // network.on("selectNode", function(ev){
+ //  $("#network-popup").modal("show");
+ //  $("h5.modal-title").text(ev.nodes[0]);
+ // });
 }
 
-function clearPopUp() {
-  document.getElementById("saveButton").onclick = null;
-  document.getElementById("cancelButton").onclick = null;
-}
+// function clearPopUp() {
+//   document.getElementById("saveButton").onclick = null;
+//   document.getElementById("cancelButton").onclick = null;
+// }
 
-function cancelEdit(callback) {
-  clearPopUp();
-  callback(null);
-}
+// function cancelEdit(callback) {
+//   clearPopUp();
+//   callback(null);
+// }
 
-function saveData(data, callback) {
-  data.id = document.getElementById("node-id").value;
-  data.label = document.getElementById("node-label").value;
-  clearPopUp();
-  callback(data);
-}
+// function saveData(data, callback) {
+//   data.id = document.getElementById("node-id").value;
+//   data.label = document.getElementById("node-label").value;
+//   clearPopUp();
+//   callback(data);
+// }
+
+// FINISH BUTTON/
+// reduced version of https://stackoverflow.com/questions/40489700/visjs-save-manipulated-data-to-json
+
+function savegraph(){
+  // make variable that contains edges information.
+  const nodePositions = data.edges.map(({ from, to }) => ({ from, to }))
+  
+  // save the edges as a JSON file for Q.
+  writedata = JSON.stringify(nodePositions)
+
+  alert("Current network edges have been saved for Q.\n\
+You can find a list of edges here (hlink).");
+
+  // HERE PROCESS writedata TO NEXT STEP IN WORKFLOW
+  // TODO
+};
+
+
+// document.getElementById('extract-positions').addEventListener('click', e => {
+  
+
+ 
+
 
 // Get out JSON data.
 var network = null;
@@ -156,7 +181,7 @@ function change_history_back() {
   //reset forward history
   history_list_forward = [];
   // apply css
-  css_for_undo_redo_change();
+  css_for_manipulation();
 }
 function redo_css_active() {
   $("#btn-undo").css({
@@ -189,7 +214,7 @@ function undo_css_inactive() {
   });
 };
 
-function css_for_undo_redo_change() {
+function css_for_manipulation() {
   if (history_list_back.length === 1) {
     redo_css_inactive();
   } else {
@@ -243,7 +268,7 @@ function undo(){
     });
     history_list_back.shift();
             // apply css
-    css_for_undo_redo_change();
+    css_for_manipulation();
   }
 };
 
@@ -287,13 +312,14 @@ function redo(){
     // history_list_forward
     history_list_forward.shift();
         // apply css
-    css_for_undo_redo_change();
+    css_for_manipulation();
   }
 };
 
 $(document).ready(function() {
               // apply css
-  css_for_undo_redo_change();
+  css_for_manipulation();
   $("#btn-undo").on("click", undo);
-  $("#btn-redo").on("click", redo)
+  $("#btn-redo").on("click", redo);
+  $("#extract-positions").on("click", savegraph)
 });
