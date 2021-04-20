@@ -45,3 +45,8 @@ The current database is the default `db.sqlite3` (ignored by .gitignore). The
 pending migrations are the Django default tables. Apply it with:
 
     $ python manage.py migrate
+
+# Genaral Notes
+
+If you want to install using python3.6 and CentOS there's a big possibility of a version crash between sqlite3 < version 3.6.20 and Django 3.2.
+This means that it's recomended to make install from source at least for python 3.7.4 and then sqlite3 > version 3.6.20
