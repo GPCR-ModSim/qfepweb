@@ -112,13 +112,19 @@ function draw() {
 // }
 // SAVE SELECTION BUTTON
 // saves a group of node IDs to a variable. Can be used downstream to look at statistics for the selected group.
+function bs_alert(message, level){
+ $('#alert-message').html(message);
+ $('.alert').attr("class", "alert alert-dismissible " + level);
+ $('.alert').show();
+}
+
 function saveselection(){
 
   const selNodes = network.getSelectedNodes()
 
   if (selNodes.length == 0){
     // catch cases where user has not selected nodes.
-    alert("Please select ligands to save to group.")
+    bs_alert("Please select ligands to save to group.", "alert-warning");
   } else {
   // require user to insert group name. Repop when no text input. :
   do{
@@ -143,17 +149,18 @@ if (groupName !== null) {
 function savegraph(){
   // make variable that contains edges information.
   const nodePositions = data.edges.map(({ from, to }) => ({ from, to }))
-  
+
   // save the edges as a JSON file for Q.
   writedata = JSON.stringify(nodePositions)
 
-  alert("Current network edges have been saved for Q.\n\
-You can find a list of edges here (hlink).");
+  bs_alert("Current network edges have been saved for Q." +
+    "<br /> You can find a list of edges here (hlink).",
+    "alert-info");
 
   // HERE PROCESS writedata TO NEXT STEP IN WORKFLOW
   // TODO
 };
- 
+
 
 
 // Get out JSON data.

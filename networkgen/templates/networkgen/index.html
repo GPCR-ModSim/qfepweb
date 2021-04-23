@@ -21,6 +21,15 @@
  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.5/lodash.min.js"></script>
 {% endblock %}
 
+{% block messages %}
+ <div class="alert alert-dismissible d-none" role="alert">
+  <div id="alert-message"></div>
+  <button type="button" class="close" onClick="$('.alert').toggle();">
+   <span aria-hidden="true">&times;</span>
+  </button>
+ </div>
+{% endblock %}
+
 {% block content %}
  <div id="network-btns">
   <button id="btn-undo" type="button" class="btn btn-light"><i class="fas fa-arrow-left "></i></button>
