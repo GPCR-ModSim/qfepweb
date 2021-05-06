@@ -108,6 +108,13 @@ class MapGen():
 
             self.lig_dict[charge]['pairs_dict'] = pairs_dict
 
+    def process_map(self):
+        self.set_ligdict()
+        self.sim_mx()
+        self.clean_mxs()
+        self.set_ligpairs()
+        self.make_map()
+
     def intersection(self, edge_list, candidate_edge):
         k = False
         r1, r2 = candidate_edge.split()[0], candidate_edge.split()[1]
@@ -210,12 +217,14 @@ class MapGen():
 
         return json.dumps(result, indent=2)
 
+
+# The following code is the CLI
 def getParser():
     parser = argparse.ArgumentParser(
         prog='MapGen',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description='FEP map generator based on selected distance metrics.')
-    parser.add_argument('-isdf', '--insdf',
+    parser.add_argument('-i', '--insdf',
                         dest="isdf",
                         required=True,
                         help=".sdf file name")
@@ -228,18 +237,13 @@ def getParser():
     return parser
 
 def main():
-    ## Use this as reference
     args = getParser().parse_args()
     ## Put file in memory stream. This allows the server to read uploaded file
     ##  into memory and pass it as an io.BytesIO() to MapGen
     with open(args.isdf, "rb") as f:
         with io.BytesIO(f.read()) as fio:
             mg = MapGen(fio, args.metric)
-            mg.set_ligdict()
-    mg.sim_mx()
-    mg.clean_mxs()
-    mg.set_ligpairs()
-    mg.make_map()
+            mg.process_map()
     print(mg.as_json())  # TODO: This gets printed, but should go into some
                          # model field.
 
