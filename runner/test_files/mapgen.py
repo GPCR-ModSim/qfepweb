@@ -79,7 +79,7 @@ class MapGen():
             for i, j in zip(df.index, df.idxmax()):
                 vlist = df.loc[i, :].tolist()
                 index = vlist.index(1.0)
-                vlist[index:] =  [0.0] * len(vlist[index:])
+                vlist[index:] = [0.0] * len(vlist[index:])
                 df.loc[i, :] = vlist
 
             if self.metric in ['tanimoto', 'mfp']:
@@ -90,17 +90,18 @@ class MapGen():
             df = df.replace(1.0, 0.0)  # set diagonal to 0
             df = df.replace(0.0, 1.0)  # set zeroes into 1 (in order to search shortest path)
 
-    def get_ligpairs(self):
-        for charge in self.lig_dict.keys():
+    def set_ligpairs(self):
+        # XXX If self.lig_dict is basically the same structure as self.sim_dfs,
+        #  Why not cycle self.sim_dfs directly and avoid a lot of boiler plate?
+        #
+        for charge, df in self.sim_dfs.items():
             pairs_dict = {}
-            for i in self.sim_dfs[charge].index:
-                for j in self.sim_dfs[charge].columns:
-                    if self.sim_dfs[charge].loc[i, j] == 1.0:
-                        continue
-                    else:
-                        pairs_dict['{} {}'.format(i, j)] = round(self.sim_dfs[charge].loc[i, j], 3)
+            for i in df.index:
+                for j in df.columns:
+                    if df.loc[i, j] != 1.0:
+                        pairs_dict['{} {}'.format(i, j)] = round(df.loc[i, j], 3)
 
-            if self.metric == 'tanimoto' or self.metric == 'mfp' or self.metric == 'mcs':
+            if self.metric in ['tanimoto', 'mfp', 'mcs']:
                 pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=False)}
             elif self.metric == 'smiles':
                 pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=True)}
@@ -245,7 +246,7 @@ def main():
             mg.set_ligdict()
     mg.sim_mx()
     mg.clean_mxs()
-    mg.get_ligpairs()
+    mg.set_ligpairs()
     mg.make_map()
     print(mg.as_json())  # TODO: This gets printed, but should go into some
                          # model field.
