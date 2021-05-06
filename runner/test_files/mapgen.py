@@ -36,11 +36,11 @@ class MapGen():
                 lig_dict[charge]['Mol'].append(mol)
                 if self.metric != 'mcs':
                     lig_dict[charge]['FP'].append(self.make_fp(mol))
-            
+
         self.lig_dict = lig_dict
-        
+
     def sim_mx(self): #2
-        if self.metric == 'tanimoto' or self.metric == 'mfp': 
+        if self.metric == 'tanimoto' or self.metric == 'mfp':
             from rdkit import DataStructs
         elif self.metric == 'mcs':
             from rdkit.Chem import rdFMCS
@@ -55,7 +55,7 @@ class MapGen():
                         df.loc[i, j] = 1.0
                         continue
                     elif i != j:
-                        if self.metric == 'tanimoto' or self.metric == 'mfp': 
+                        if self.metric == 'tanimoto' or self.metric == 'mfp':
                             fp1,fp2 = self.lig_dict[charge]['FP'][index], self.lig_dict[charge]['FP'][jndex]
                             similarity = DataStructs.FingerprintSimilarity(fp1,fp2)
                             df.loc[i, j] = similarity
@@ -93,7 +93,7 @@ class MapGen():
                     index = vlist.index(1.0)
                     vlist[index:] =  [0.0] * len(vlist[index:])
                     self.sim_dfs[charge].loc[i, :] = vlist
-                    
+
                 self.sim_dfs[charge] = 100 - self.sim_dfs[charge] #get dissimilarity matrix
                 self.sim_dfs[charge] = self.sim_dfs[charge].replace(1.0, 0.0) #set diagonal to 0
                 self.sim_dfs[charge] = self.sim_dfs[charge].replace(0.0, 1.0) #set zeroes into 1 (in order to search shortest path)
@@ -107,10 +107,10 @@ class MapGen():
                         continue
                     else:
                         pairs_dict['{} {}'.format(i, j)] = round(self.sim_dfs[charge].loc[i, j], 3)
-            
+
             if self.metric == 'tanimoto' or self.metric == 'mfp' or self.metric == 'mcs':
                 pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=False)}
-            elif self.metric == 'smiles': 
+            elif self.metric == 'smiles':
                 pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=True)}
 
             self.lig_dict[charge]['pairs_dict'] = pairs_dict
@@ -135,7 +135,7 @@ class MapGen():
         for node in G.nodes:
             if len(G.edges(node)) == 1:
                 node_list.append(node)
-        return node_list     
+        return node_list
 
     def make_map(self):
         for charge in self.lig_dict.keys():
@@ -161,7 +161,7 @@ class MapGen():
                             H.add_edge(l1, l2, weight=score)
                             break
 
-            # 2. Close Cycles            
+            # 2. Close Cycles
             while len(self.outer_nodes(H)) != 0:
                 for pert, score in self.lig_dict[charge]['pairs_dict'].items():
                     l1, l2 = pert.split()[0], pert.split()[1]
@@ -198,7 +198,7 @@ class MapGen():
             for edge in H.edges:
                 print('{} {}'.format(edge[0], edge[1]))
 
-if __name__ == "__main__":
+def getParser():
     parser = argparse.ArgumentParser(
         prog='MapGen',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -213,11 +213,16 @@ if __name__ == "__main__":
                         choices=['MFP', 'Tanimoto', 'MCS', 'SMILES'],
                         required=False,
                         help="Distance metric for ligand pairwairse comparison")
+    return parser
 
-args = parser.parse_args()
-mg = MapGen(args.isdf, args.metric)
-mg.get_ligdict()
-mg.sim_mx()
-mg.clean_mxs()
-mg.get_ligpairs()
-mg.make_map()
+def main():
+    args = getParser().parse_args()
+    mg = MapGen(args.isdf, args.metric)
+    mg.get_ligdict()
+    mg.sim_mx()
+    mg.clean_mxs()
+    mg.get_ligpairs()
+    mg.make_map()
+
+if __name__ == "__main__":
+    main()
