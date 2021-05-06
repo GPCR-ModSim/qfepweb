@@ -1,4 +1,5 @@
 import argparse
+import io
 import json
 import os
 
@@ -12,7 +13,7 @@ from rdkit import Chem
 
 class MapGen():
     def __init__(self, in_sdf, metric):
-        self.suppl = Chem.SDMolSupplier(in_sdf)
+        self.suppl = Chem.ForwardSDMolSupplier(in_sdf)
         self.metric = metric.lower()
 
     def make_fp(self, mol):
@@ -28,13 +29,13 @@ class MapGen():
         lig_dict = {}
         for mol in self.suppl:
             charge = Chem.rdmolops.GetFormalCharge(mol)
-            if charge not in lig_dict.keys():
-                lig_dict[charge] = {'Name':[], 'Mol':[], 'FP':[]}
+            if charge in lig_dict.keys():
                 lig_dict[charge]['Name'].append(mol.GetProp('_Name'))
                 lig_dict[charge]['Mol'].append(mol)
                 if self.metric != 'mcs':
                     lig_dict[charge]['FP'].append(self.make_fp(mol))
             else:
+                lig_dict[charge] = {'Name':[], 'Mol':[], 'FP':[]}
                 lig_dict[charge]['Name'].append(mol.GetProp('_Name'))
                 lig_dict[charge]['Mol'].append(mol)
                 if self.metric != 'mcs':
@@ -248,13 +249,18 @@ def getParser():
 def main():
     ## Use this as reference
     args = getParser().parse_args()
-    mg = MapGen(args.isdf, args.metric)
-    mg.get_ligdict()
+    ## Put file in memory stream. This allows the server to read uploaded file
+    ##  into memory and pass it as an io.BytesIO() to MapGen
+    with open(args.isdf, "rb") as f:
+        with io.BytesIO(f.read()) as fio:
+            mg = MapGen(fio, args.metric)
+            mg.get_ligdict()
     mg.sim_mx()
     mg.clean_mxs()
     mg.get_ligpairs()
     mg.make_map()
-    print(mg.as_json())
+    print(mg.as_json())  # TODO: This gets printed, but should go into some
+                         # model field.
 
 if __name__ == "__main__":
     main()
