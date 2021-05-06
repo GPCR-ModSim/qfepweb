@@ -31,13 +31,12 @@ class MapGen():
         self.lig_dict = {}
         for mol in self.suppl:
             charge = Chem.rdmolops.GetFormalCharge(mol)
-            if charge not in self.lig_dict.keys():
-                self.lig_dict[charge] = {'Name':[], 'Mol':[], 'FP':[]}
+            v = self.lig_dict.setdefault(charge, {'Name': [], 'Mol': [], 'FP': []})
 
-            self.lig_dict[charge]['Name'].append(mol.GetProp('_Name'))
-            self.lig_dict[charge]['Mol'].append(mol)
+            v['Name'].append(mol.GetProp('_Name'))
+            v['Mol'].append(mol)
             if self.metric != 'mcs':
-                self.lig_dict[charge]['FP'].append(self.make_fp(mol))
+                v['FP'].append(self.make_fp(mol))
 
     def sim_mx(self): #2
         if self.metric in ['tanimoto', 'mfp']:
@@ -201,8 +200,7 @@ class MapGen():
         for charge, lig in self.lig_dict.items():
             # Add unique nodes for this charge to the final nodes
             nodes = nodes | set(
-                [node for edge in lig['Graph'].edges
-                 for node in edge])
+                [node for edge in lig['Graph'].edges for node in edge])
             for edge in lig['Graph'].edges:
                 result["edges"].append(
                     {"from": edge[0],
