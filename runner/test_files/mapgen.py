@@ -15,6 +15,7 @@ class MapGen():
     def __init__(self, in_sdf, metric):
         self.suppl = Chem.ForwardSDMolSupplier(in_sdf)
         self.metric = metric.lower()
+        self.lig_dict = {}
 
     def make_fp(self, mol):
         if self.metric == 'tanimoto':
@@ -25,23 +26,17 @@ class MapGen():
             fp = Chem.MolToSmiles(mol, isomericSmiles=True)
         return fp
 
-    def get_ligdict(self): #1
-        lig_dict = {}
+    def set_ligdict(self): #1
+        self.lig_dict = {}
         for mol in self.suppl:
             charge = Chem.rdmolops.GetFormalCharge(mol)
-            if charge in lig_dict.keys():
-                lig_dict[charge]['Name'].append(mol.GetProp('_Name'))
-                lig_dict[charge]['Mol'].append(mol)
-                if self.metric != 'mcs':
-                    lig_dict[charge]['FP'].append(self.make_fp(mol))
-            else:
-                lig_dict[charge] = {'Name':[], 'Mol':[], 'FP':[]}
-                lig_dict[charge]['Name'].append(mol.GetProp('_Name'))
-                lig_dict[charge]['Mol'].append(mol)
-                if self.metric != 'mcs':
-                    lig_dict[charge]['FP'].append(self.make_fp(mol))
+            if charge not in self.lig_dict.keys():
+                self.lig_dict[charge] = {'Name':[], 'Mol':[], 'FP':[]}
 
-        self.lig_dict = lig_dict
+            self.lig_dict[charge]['Name'].append(mol.GetProp('_Name'))
+            self.lig_dict[charge]['Mol'].append(mol)
+            if self.metric != 'mcs':
+                self.lig_dict[charge]['FP'].append(self.make_fp(mol))
 
     def sim_mx(self): #2
         if self.metric == 'tanimoto' or self.metric == 'mfp':
@@ -254,7 +249,7 @@ def main():
     with open(args.isdf, "rb") as f:
         with io.BytesIO(f.read()) as fio:
             mg = MapGen(fio, args.metric)
-            mg.get_ligdict()
+            mg.set_ligdict()
     mg.sim_mx()
     mg.clean_mxs()
     mg.get_ligpairs()
