@@ -48,15 +48,13 @@ class MapGen():
             from Bio import pairwise2
 
         self.sim_dfs = {}
-        print(self.lig_dict)
         for charge, item in self.lig_dict.items():
             df = pd.DataFrame()
             for index, i in enumerate(item['Name']):
                 for jndex, j in enumerate(item['Name']):
                     if i == j:
                         df.loc[i, j] = 1.0
-                        continue
-                    elif i != j:
+                    else:
                         if self.metric in ['tanimoto', 'mfp']:
                             df.loc[i, j] = DataStructs.FingerprintSimilarity(
                                 item['FP'][index], item['FP'][jndex])
@@ -74,31 +72,23 @@ class MapGen():
             self.sim_dfs[charge] = df
 
     def clean_mxs(self):
-        for charge in self.lig_dict.keys():
-            if self.metric == 'tanimoto' or self.metric == 'mfp' or self.metric == 'smiles':
-                m = self.sim_dfs[charge].idxmax()
-                for i, j in zip(self.sim_dfs[charge].index, m):
-                    vlist = self.sim_dfs[charge].loc[i, :].tolist()
-                    index = vlist.index(1.0)
-                    vlist[index:] =  [0.0] * len(vlist[index:])
-                    self.sim_dfs[charge].loc[i, :] = vlist
+        # XXX If self.lig_dict is basically the same structure as self.sim_dfs,
+        #  Why not cycle self.sim_dfs directly and avoid a lot of boiler plate?
+        #
+        for charge, df in self.sim_dfs.items():
+            for i, j in zip(df.index, df.idxmax()):
+                vlist = df.loc[i, :].tolist()
+                index = vlist.index(1.0)
+                vlist[index:] =  [0.0] * len(vlist[index:])
+                df.loc[i, :] = vlist
 
-                if self.metric == 'tanimoto' or self.metric == 'mfp':
-                    self.sim_dfs[charge] = 1 - self.sim_dfs[charge] #get dissimilarity matrix
-                self.sim_dfs[charge] = self.sim_dfs[charge].replace(1.0, 0.0) #set diagonal to 0
-                self.sim_dfs[charge] = self.sim_dfs[charge].replace(0.0, 1.0) #set zeroes into 1 (in order to search shortest path)
+            if self.metric in ['tanimoto', 'mfp']:
+                df = 1 - df  # get dissimilarity matrix
 
             if self.metric == 'mcs':
-                m = self.sim_dfs[charge].idxmax()
-                for i, j in zip(self.sim_dfs[charge].index, m):
-                    vlist = self.sim_dfs[charge].loc[i, :].tolist()
-                    index = vlist.index(1.0)
-                    vlist[index:] =  [0.0] * len(vlist[index:])
-                    self.sim_dfs[charge].loc[i, :] = vlist
-
-                self.sim_dfs[charge] = 100 - self.sim_dfs[charge] #get dissimilarity matrix
-                self.sim_dfs[charge] = self.sim_dfs[charge].replace(1.0, 0.0) #set diagonal to 0
-                self.sim_dfs[charge] = self.sim_dfs[charge].replace(0.0, 1.0) #set zeroes into 1 (in order to search shortest path)
+                df = 100 - self.sim_dfs[charge]  # get dissimilarity matrix
+            df = df.replace(1.0, 0.0)  # set diagonal to 0
+            df = df.replace(0.0, 1.0)  # set zeroes into 1 (in order to search shortest path)
 
     def get_ligpairs(self):
         for charge in self.lig_dict.keys():
