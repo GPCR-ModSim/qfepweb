@@ -115,19 +115,16 @@ class MapGen():
         self.make_map()
 
     def intersection(self, edge_list, candidate_edge):
-        k = False
         r1, r2 = candidate_edge.split()[0], candidate_edge.split()[1]
         for edge in edge_list:
             if r1 == edge[0] or r1 == edge[1] or r2 == edge[0] or r2 == edge[1]:
-                k = True
-        return k
+                return True # Shortcut comparing: it's already True
+        return False
 
     def not_ingraph(self, node_list, candidate_edge):
-        k = False
         r1, r2 = candidate_edge.split()[0], candidate_edge.split()[1]
-        if r1 not in node_list or r2 not in node_list:
-            k = True
-        return k
+
+        return r1 not in node_list or r2 not in node_list
 
     def outer_nodes(self, G):
         node_list = []
