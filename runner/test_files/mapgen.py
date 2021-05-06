@@ -1,11 +1,14 @@
-import pandas as pd
-import numpy as np
 import argparse
+import json
+import os
+
+import networkx as nx
+import numpy as np
+import pandas as pd
 from rdkit.Chem.Fingerprints import FingerprintMols
 from rdkit.Chem import AllChem
 from rdkit import Chem
-import networkx as nx
-import os
+
 
 class MapGen():
     def __init__(self, in_sdf, metric):
@@ -195,8 +198,35 @@ class MapGen():
                         continue
 
             self.lig_dict[charge]['Graph'] = H
-            for edge in H.edges:
-                print('{} {}'.format(edge[0], edge[1]))
+
+    def as_json(self):
+        ## Return the nodes and edges of the graph as a Json string
+        ##  The "keys" are lists of compatible keys for edges and nodes as read
+        ##  at /networkgen/static/js/networkgen.js
+        ##
+        edge_keys = ["label", "freenrg", "sem", "crashes", "from", "to"]
+        node_keys = ["shape", "label", "image", "id"]
+        nodes = set([])
+        result = {"nodes": [], "edges": []}
+
+        for charge in self.lig_dict.keys():
+            # Add unique nodes for this charge to the final nodes
+            nodes = nodes | set(
+                [node for edge in self.lig_dict[charge]['Graph'].edges
+                 for node in edge])
+            for edge in self.lig_dict[charge]['Graph'].edges:
+                result["edges"].append(
+                    {"from": edge[0],
+                     "to": edge[1]})
+
+        for node in nodes:
+            result["nodes"].append(
+                {"label": node,
+                 "image": "",  # TODO: networkgen.js requires an image. Make it
+                               # use some kind of generic image.
+                 "id": node})
+
+        return json.dumps(result, indent=2)
 
 def getParser():
     parser = argparse.ArgumentParser(
@@ -216,6 +246,7 @@ def getParser():
     return parser
 
 def main():
+    ## Use this as reference
     args = getParser().parse_args()
     mg = MapGen(args.isdf, args.metric)
     mg.get_ligdict()
@@ -223,6 +254,7 @@ def main():
     mg.clean_mxs()
     mg.get_ligpairs()
     mg.make_map()
+    print(mg.as_json())
 
 if __name__ == "__main__":
     main()
