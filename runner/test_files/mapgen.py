@@ -16,6 +16,7 @@ class MapGen():
         self.suppl = Chem.ForwardSDMolSupplier(in_sdf)
         self.metric = metric.lower()
         self.lig_dict = {}
+        self.sim_dfs = {}
 
     def make_fp(self, mol):
         if self.metric == 'tanimoto':
@@ -39,36 +40,38 @@ class MapGen():
                 self.lig_dict[charge]['FP'].append(self.make_fp(mol))
 
     def sim_mx(self): #2
-        if self.metric == 'tanimoto' or self.metric == 'mfp':
+        if self.metric in ['tanimoto', 'mfp']:
             from rdkit import DataStructs
         elif self.metric == 'mcs':
             from rdkit.Chem import rdFMCS
         elif self.metric == 'smiles':
             from Bio import pairwise2
-        sim_dfs = {}
-        for charge in self.lig_dict.keys():
+
+        self.sim_dfs = {}
+        print(self.lig_dict)
+        for charge, item in self.lig_dict.items():
             df = pd.DataFrame()
-            for index, i in enumerate(self.lig_dict[charge]['Name']):
-                for jndex, j in enumerate(self.lig_dict[charge]['Name']):
+            for index, i in enumerate(item['Name']):
+                for jndex, j in enumerate(item['Name']):
                     if i == j:
                         df.loc[i, j] = 1.0
                         continue
                     elif i != j:
-                        if self.metric == 'tanimoto' or self.metric == 'mfp':
-                            fp1,fp2 = self.lig_dict[charge]['FP'][index], self.lig_dict[charge]['FP'][jndex]
-                            similarity = DataStructs.FingerprintSimilarity(fp1,fp2)
-                            df.loc[i, j] = similarity
+                        if self.metric in ['tanimoto', 'mfp']:
+                            df.loc[i, j] = DataStructs.FingerprintSimilarity(
+                                item['FP'][index], item['FP'][jndex])
                         if self.metric == 'mcs':
-                            mcs = rdFMCS.FindMCS([self.lig_dict[charge]['Mol'][index], self.lig_dict[charge]['Mol'][jndex]], atomCompare=rdFMCS.AtomCompare.CompareAny)
+                            mcs = rdFMCS.FindMCS(
+                                [item['Mol'][index],
+                                 item['Mol'][jndex]],
+                                atomCompare=rdFMCS.AtomCompare.CompareAny)
                             df.loc[i, j] = mcs.numAtoms + mcs.numBonds
                         if self.metric == 'smiles':
-                            fp1,fp2 = self.lig_dict[charge]['FP'][index], self.lig_dict[charge]['FP'][jndex]
-                            alignments = pairwise2.align.globalms(fp1, fp2, 1,-1, -0.5, -0.05)
+                            alignments = pairwise2.align.globalms(
+                                item['FP'][index], item['FP'][jndex], 1, -1, -0.5, -0.05)
                             df.loc[i, j] = alignments[0][2]
 
-            sim_dfs[charge] = df
-
-        self.sim_dfs = sim_dfs
+            self.sim_dfs[charge] = df
 
     def clean_mxs(self):
         for charge in self.lig_dict.keys():
