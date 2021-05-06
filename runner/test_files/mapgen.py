@@ -131,41 +131,37 @@ class MapGen():
         return node_list
 
     def make_map(self):
-        for charge in self.lig_dict.keys():
+        for charge, lig in self.lig_dict.items():
             H = nx.Graph()
-            if len(self.lig_dict[charge]['Name']) == 1: #In case one ligand is found alone in a charge group
-                ligcol = self.sim_dfs[self.lig_dict[charge]['Name']].sort_values(by=[self.lig_dict[charge]['Name'][0]]) #complete similarity matrix
-                H.add_edge(self.lig_dict[charge]['Name'][0], ligcol.index[1])
-                H.add_edge(self.lig_dict[charge]['Name'][0], ligcol.index[2])
-                lig_dict[charge]['Graph'] = H
+            if len(lig['Name']) == 1:  # In case one ligand is found alone in a charge group
+                ligcol = self.sim_dfs[lig['Name']].sort_values(by=[self.lig_dict[charge]['Name'][0]]) #complete similarity matrix
+                H.add_edge(lig['Name'][0], ligcol.index[1])
+                H.add_edge(lig['Name'][0], ligcol.index[2])
+                lig['Graph'] = H
                 break
 
             # 1. Make SPT
             incomplete = True
             while incomplete:
-                for pert, score in self.lig_dict[charge]['pairs_dict'].items():
-                    if len(H.nodes) == len(self.lig_dict[charge]['Name']):
+                for pert, score in lig['pairs_dict'].items():
+                    if len(H.nodes) == len(lig['Name']):
                         incomplete = False
                         break
                     l1, l2 = pert.split()[0], pert.split()[1]
                     if H.has_edge(l1, l2) or H.has_edge(l2, l1):
                         continue
                     if len(H.nodes) == 0 or self.intersection(H.edges, pert) and self.not_ingraph(H.nodes, pert):
-                            H.add_edge(l1, l2, weight=score)
-                            break
+                        H.add_edge(l1, l2, weight=score)
+                        break
 
             # 2. Close Cycles
             while len(self.outer_nodes(H)) != 0:
-                for pert, score in self.lig_dict[charge]['pairs_dict'].items():
+                for pert, score in lig['pairs_dict'].items():
                     l1, l2 = pert.split()[0], pert.split()[1]
                     if l1 in self.outer_nodes(H) or l2 in self.outer_nodes(H):
                         if (l1, l2) not in H.edges or (l2, l1) not in H.edges:
                             H.add_edge(l1, l2, weight=score)
                             break
-                        else:
-                            continue
-                    else:
-                        continue
 
             # 3. Add influence edges
             eig_cent = nx.eigenvector_centrality(H, max_iter=1000)
@@ -174,7 +170,7 @@ class MapGen():
             per_nodes = [k for k,v in nx.eigenvector_centrality(H, max_iter=1000).items() if v < 0.01]
             per_len = len(per_nodes)
             while per_len > 1:
-                for pert, score in self.lig_dict[charge]['pairs_dict'].items():
+                for pert, score in lig['pairs_dict'].items():
                     l1, l2 = pert.split()[0], pert.split()[1]
                     if l1 in per_nodes and l2 not in per_nodes or l1 not in per_nodes and l2 in per_nodes:
                         if (l1, l2) not in H.edges or (l2, l1) not in H.edges and intersection(H.edges, pert):
@@ -182,12 +178,8 @@ class MapGen():
                             nlen = len([v for k,v in nx.eigenvector_centrality(H, max_iter=1000).items() if v < 0.01])
                             per_len = nlen
                             break
-                        else:
-                            continue
-                    else:
-                        continue
 
-            self.lig_dict[charge]['Graph'] = H
+            lig['Graph'] = H
 
     def as_json(self):
         ## Return the nodes and edges of the graph as a Json string
