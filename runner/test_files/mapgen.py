@@ -141,7 +141,7 @@ class MapGen():
         for charge, lig in self.lig_dict.items():
             H = nx.Graph()
             if len(lig['Name']) == 1:  # In case one ligand is found alone in a charge group
-                ligcol = self.sim_dfs[lig['Name']].sort_values(by=[self.lig_dict[charge]['Name'][0]]) #complete similarity matrix
+                ligcol = self.sim_dfs[lig['Name']].sort_values(by=[lig['Name'][0]]) #complete similarity matrix
                 H.add_edge(lig['Name'][0], ligcol.index[1])
                 H.add_edge(lig['Name'][0], ligcol.index[2])
                 lig['Graph'] = H
@@ -198,12 +198,12 @@ class MapGen():
         nodes = set([])
         result = {"nodes": [], "edges": []}
 
-        for charge in self.lig_dict.keys():
+        for charge, lig in self.lig_dict.items():
             # Add unique nodes for this charge to the final nodes
             nodes = nodes | set(
-                [node for edge in self.lig_dict[charge]['Graph'].edges
+                [node for edge in lig['Graph'].edges
                  for node in edge])
-            for edge in self.lig_dict[charge]['Graph'].edges:
+            for edge in lig['Graph'].edges:
                 result["edges"].append(
                     {"from": edge[0],
                      "to": edge[1]})
