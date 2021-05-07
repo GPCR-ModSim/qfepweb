@@ -2,7 +2,6 @@ import argparse
 import io
 import json
 import os
-
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -27,26 +26,23 @@ class MapGen():
             fp = Chem.MolToSmiles(mol, isomericSmiles=True)
         return fp
 
-    def set_ligdict(self): #1
+    def set_ligdict(self): 
         self.lig_dict = {}
         for mol in self.suppl:
             charge = Chem.rdmolops.GetFormalCharge(mol)
             v = self.lig_dict.setdefault(charge, {'Name': [], 'Mol': [], 'FP': []})
-
             v['Name'].append(mol.GetProp('_Name'))
             v['Mol'].append(mol)
             if self.metric != 'mcs':
                 v['FP'].append(self.make_fp(mol))
 
-    def sim_mx(self): #2
+    def sim_mx(self): 
         if self.metric in ['tanimoto', 'mfp']:
             from rdkit import DataStructs
         elif self.metric == 'mcs':
             from rdkit.Chem import rdFMCS
         elif self.metric == 'smiles':
             from Bio import pairwise2
-
-        self.sim_dfs = {}
         for charge, item in self.lig_dict.items():
             df = pd.DataFrame()
             for index, i in enumerate(item['Name']):
@@ -67,38 +63,31 @@ class MapGen():
                             alignments = pairwise2.align.globalms(
                                 item['FP'][index], item['FP'][jndex], 1, -1, -0.5, -0.05)
                             df.loc[i, j] = alignments[0][2]
-
-            self.sim_dfs[charge] = df
+            self.lig_dict[charge]['df'] = df
 
     def clean_mxs(self):
-        # XXX If self.lig_dict is basically the same structure as self.sim_dfs,
-        #  Why not cycle self.sim_dfs directly and avoid a lot of boiler plate?
-        #
-        for charge, df in self.sim_dfs.items():
-            for i, j in zip(df.index, df.idxmax()):
-                vlist = df.loc[i, :].tolist()
+        for charge in self.lig_dict.keys():
+            for i, j in zip(self.lig_dict[charge]['df'].index, self.lig_dict[charge]['df'].idxmax()):
+                vlist = self.lig_dict[charge]['df'].loc[i, :].tolist()
                 index = vlist.index(1.0)
                 vlist[index:] = [0.0] * len(vlist[index:])
-                df.loc[i, :] = vlist
+                self.lig_dict[charge]['df'].loc[i, :] = vlist
 
             if self.metric in ['tanimoto', 'mfp']:
-                df = 1 - df  # get dissimilarity matrix
+                df = 1 - self.lig_dict[charge]['df']  # get dissimilarity matrix
 
             if self.metric == 'mcs':
-                df = 100 - self.sim_dfs[charge]  # get dissimilarity matrix
-            df = df.replace(1.0, 0.0)  # set diagonal to 0
-            df = df.replace(0.0, 1.0)  # set zeroes into 1 (in order to search shortest path)
+                df = 100 - self.lig_dict[charge]['df']  # get dissimilarity matrix
+            self.lig_dict[charge]['df'] = df.replace(1.0, 0.0)  # set diagonal to 0
+            self.lig_dict[charge]['df'] = df.replace(0.0, 1.0)  # set zeroes into 1 (in order to search shortest path)
 
     def set_ligpairs(self):
-        # XXX If self.lig_dict is basically the same structure as self.sim_dfs,
-        #  Why not cycle self.sim_dfs directly and avoid a lot of boiler plate?
-        #
-        for charge, df in self.sim_dfs.items():
+        for charge in self.lig_dict.keys():
             pairs_dict = {}
-            for i in df.index:
-                for j in df.columns:
-                    if df.loc[i, j] != 1.0:
-                        pairs_dict['{} {}'.format(i, j)] = round(df.loc[i, j], 3)
+            for i in self.lig_dict[charge]['df'].index:
+                for j in self.lig_dict[charge]['df'].columns:
+                    if self.lig_dict[charge]['df'].loc[i, j] != 1.0:
+                        pairs_dict['{} {}'.format(i, j)] = round(self.lig_dict[charge]['df'].loc[i, j], 3)
 
             if self.metric in ['tanimoto', 'mfp', 'mcs']:
                 pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=False)}
@@ -123,7 +112,6 @@ class MapGen():
 
     def not_ingraph(self, node_list, candidate_edge):
         r1, r2 = candidate_edge.split()[0], candidate_edge.split()[1]
-
         return r1 not in node_list or r2 not in node_list
 
     def outer_nodes(self, G):
@@ -188,7 +176,6 @@ class MapGen():
         ## Return the nodes and edges of the graph as a Json string
         ##  The "keys" are lists of compatible keys for edges and nodes as read
         ##  at /networkgen/static/js/networkgen.js
-        ##
         edge_keys = ["label", "freenrg", "sem", "crashes", "from", "to"]
         node_keys = ["shape", "label", "image", "id"]
         nodes = set([])
