@@ -15,7 +15,6 @@ class MapGen():
         self.suppl = Chem.ForwardSDMolSupplier(in_sdf)
         self.metric = metric.lower()
         self.lig_dict = {}
-        self.sim_dfs = {}
 
     def make_fp(self, mol):
         if self.metric == 'tanimoto':
@@ -26,7 +25,7 @@ class MapGen():
             fp = Chem.MolToSmiles(mol, isomericSmiles=True)
         return fp
 
-    def set_ligdict(self): 
+    def set_ligdict(self):
         self.lig_dict = {}
         for mol in self.suppl:
             charge = Chem.rdmolops.GetFormalCharge(mol)
@@ -36,7 +35,7 @@ class MapGen():
             if self.metric != 'mcs':
                 v['FP'].append(self.make_fp(mol))
 
-    def sim_mx(self): 
+    def sim_mx(self):
         if self.metric in ['tanimoto', 'mfp']:
             from rdkit import DataStructs
         elif self.metric == 'mcs':
@@ -66,35 +65,35 @@ class MapGen():
             self.lig_dict[charge]['df'] = df
 
     def clean_mxs(self):
-        for charge in self.lig_dict.keys():
-            for i, j in zip(self.lig_dict[charge]['df'].index, self.lig_dict[charge]['df'].idxmax()):
-                vlist = self.lig_dict[charge]['df'].loc[i, :].tolist()
+        for charge, value in self.lig_dict.items():
+            for i, j in zip(value['df'].index, value['df'].idxmax()):
+                vlist = value['df'].loc[i, :].tolist()
                 index = vlist.index(1.0)
                 vlist[index:] = [0.0] * len(vlist[index:])
-                self.lig_dict[charge]['df'].loc[i, :] = vlist
+                value['df'].loc[i, :] = vlist
 
             if self.metric in ['tanimoto', 'mfp']:
-                df = 1 - self.lig_dict[charge]['df']  # get dissimilarity matrix
+                df = 1 - value['df']  # get dissimilarity matrix
 
             if self.metric == 'mcs':
-                df = 100 - self.lig_dict[charge]['df']  # get dissimilarity matrix
-            self.lig_dict[charge]['df'] = df.replace(1.0, 0.0)  # set diagonal to 0
-            self.lig_dict[charge]['df'] = df.replace(0.0, 1.0)  # set zeroes into 1 (in order to search shortest path)
+                df = 100 - value['df']  # get dissimilarity matrix
+            value['df'] = df.replace(1.0, 0.0)  # set diagonal to 0
+            value['df'] = df.replace(0.0, 1.0)  # set zeroes into 1 (in order to search shortest path)
 
     def set_ligpairs(self):
-        for charge in self.lig_dict.keys():
+        for charge, value in self.lig_dict.items():
             pairs_dict = {}
-            for i in self.lig_dict[charge]['df'].index:
-                for j in self.lig_dict[charge]['df'].columns:
-                    if self.lig_dict[charge]['df'].loc[i, j] != 1.0:
-                        pairs_dict['{} {}'.format(i, j)] = round(self.lig_dict[charge]['df'].loc[i, j], 3)
+            for i in value['df'].index:
+                for j in value['df'].columns:
+                    if value['df'].loc[i, j] != 1.0:
+                        pairs_dict['{} {}'.format(i, j)] = round(value['df'].loc[i, j], 3)
 
             if self.metric in ['tanimoto', 'mfp', 'mcs']:
                 pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=False)}
             elif self.metric == 'smiles':
                 pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=True)}
 
-            self.lig_dict[charge]['pairs_dict'] = pairs_dict
+            value['pairs_dict'] = pairs_dict
 
     def process_map(self):
         self.set_ligdict()
@@ -125,7 +124,7 @@ class MapGen():
         for charge, lig in self.lig_dict.items():
             H = nx.Graph()
             if len(lig['Name']) == 1:  # In case one ligand is found alone in a charge group
-                ligcol = self.sim_dfs[lig['Name']].sort_values(by=[lig['Name'][0]]) #complete similarity matrix
+                ligcol = lig['Name'].sort_values(by=[lig['Name'][0]]) #complete similarity matrix
                 H.add_edge(lig['Name'][0], ligcol.index[1])
                 H.add_edge(lig['Name'][0], ligcol.index[2])
                 lig['Graph'] = H
