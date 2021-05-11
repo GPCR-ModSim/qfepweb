@@ -12,11 +12,15 @@
 
   <div class="collapse navbar-collapse" id="navbarSupportedContent">
    <ul class="navbar-nav ml-auto text-right">
+    <li class="nav-item">
+     <a class="nav-link " href="{% url 'networkgen:index' %}">NetGen</a>
+    </li>
+
     <li class="nav-item dropdown">
      <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Prepare</a>
      <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-      <a class="dropdown-item" href="{% url 'runner:qligfep' %}">Ligand</a>
-      <a class="dropdown-item" href="#">Protein</a>
+      <a class="dropdown-item" href="/">Ligand</a>
+      <a class="dropdown-item" href="/">Protein</a>
      </div>
     </li>
 
@@ -24,12 +28,12 @@
      <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">FEP</a>
      <div class="dropdown-menu" aria-labelledby="navbarDropdown">
       <a class="dropdown-item" href="{% url 'runner:qligfep' %}">QligFEP</a>
-      <a class="dropdown-item" href="#">QresFEP</a>
+      <a class="dropdown-item" href="/">QresFEP</a>
      </div>
     </li>
 
     <li class="nav-item">
-     <a class="nav-link " href="#">LIE</a>
+     <a class="nav-link " href="/">LIE</a>
     </li>
     <li class="nav-item">
      <a class="nav-link" href="{% url 'about:index' %}">About</a>
