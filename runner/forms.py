@@ -2,7 +2,6 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import (ButtonHolder, Div, Fieldset, Layout, Submit,
                                  Reset)
 from django.forms import ModelForm
-
 from runner.models import Runner
 from runner import validators
 
@@ -29,18 +28,18 @@ class RunnerForm(ModelForm):
                     Div("sampling", css_class="col-sm-6"),
                     css_class="row"),
                 Div(
-                   Div("cysbond",  css_class="col-sm-6"),
-                   Div("windows", css_class="col-sm-6"),
-                   css_class="row"),
+                    Div("cysbond", css_class="col-sm-6"),
+                    Div("windows", css_class="col-sm-6"),
+                    css_class="row"),
                 Div(
-                   Div("system", css_class="col-sm-6"),
-                   Div("temperatures", css_class="col-sm-6"),
-                   css_class="row"),
+                    Div("system", css_class="col-sm-6"),
+                    Div("temperatures", css_class="col-sm-6"),
+                    css_class="row"),
                 Div(
-                   Div("replicates", css_class="col-sm-4"),
-                   Div("start", css_class="col-sm-4"),
-                   Div("sphere_radius", css_class="col-sm-4"),
-                   css_class="row")),
+                    Div("replicates", css_class="col-sm-4"),
+                    Div("start", css_class="col-sm-4"),
+                    Div("sphere_radius", css_class="col-sm-4"),
+                    css_class="row")),
             ButtonHolder(
                 Submit("submit", "Submit", css_class="bg-cp1"),
                 Reset("reset", "Reset")))
