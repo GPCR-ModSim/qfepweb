@@ -1,7 +1,6 @@
 import argparse
 import io
 import json
-from typing import Generator
 import networkx as nx
 import pandas as pd
 from rdkit.Chem.Fingerprints import FingerprintMols
@@ -13,9 +12,11 @@ from networkgen.models import Ligand
 
 
 class MapGen():
-    def __init__(self, in_sdf, metric):
+    def __init__(self, in_sdf, metric, network_obj=None):
+        in_sdf.seek(0)
         self.suppl = Chem.ForwardSDMolSupplier(in_sdf)
         self.metric = metric
+        self.network = network_obj
         self.lig_dict = {}
         self.sim_dfs = {}
 
@@ -29,15 +30,15 @@ class MapGen():
         else: fp = None
         return fp
     
-    def get_Ligand(self, rdmol):
-        return Ligand(charge=Chem.rdmolops.GetFormalCharge(rdmol), atom_number=len([atom for atom in rdmol.GetAtoms()]), name=rdmol.GetProp('_Name'), SMILES=Chem.MolToSmiles(rdmol, isomericSmiles=True), image=Draw.MolToFile(rdmol,"images/{}.png".format(id),size=(200,250)))
+    def get_ligand(self, rdmol):
+        return Ligand(charge=Chem.rdmolops.GetFormalCharge(rdmol), atom_number=len([atom for atom in rdmol.GetAtoms()]), name=rdmol.GetProp('_Name'), SMILES=Chem.MolToSmiles(rdmol, isomericSmiles=True), image=Draw.MolToFile(rdmol,"images/{}.png".format(id),size=(200,250)), network=self.network)
 
 
-    def set_ligdict(self): 
+    def set_ligdict(self):
         self.lig_dict = {}
         for mol in self.suppl:
             charge = Chem.rdmolops.GetFormalCharge(mol)
-            ligand = self.get_Ligand(mol)
+            ligand = self.get_ligand(mol)
             ligand.save()
             v = self.lig_dict.setdefault(charge, {'Name': [], 'Mol': [], 'FP': []})
             v['Name'].append(mol.GetProp('_Name'))
@@ -45,7 +46,7 @@ class MapGen():
             if self.metric != g.MCS:
                 v['FP'].append(self.make_fp(mol))
 
-    def sim_mx(self): 
+    def sim_mx(self):
         if self.metric in [g.Tanimoto, g.MFP]:
             from rdkit import DataStructs
         elif self.metric == g.MCS:
@@ -111,6 +112,7 @@ class MapGen():
         self.clean_mxs()
         self.set_ligpairs()
         self.make_map()
+        self.as_json()
 
     def intersection(self, edge_list, candidate_edge):
         r1, r2 = candidate_edge.split()[0], candidate_edge.split()[1]
@@ -205,6 +207,9 @@ class MapGen():
                                # use some kind of generic image.
                  "id": node})
 
+        self.network.network = json.dumps(result)
+        with open('networkgen/templates/networkgen/graph.json', 'w') as outfile:
+            json.dump(result, outfile)
         return json.dumps(result, indent=2)
 
 

@@ -8,7 +8,6 @@ class GeneratorForm(ModelForm):
     """A base form for the FEP network generator model."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        in_sdf = forms.FileField(label="Select a .sdf file, please.")
         self.helper = FormHelper()
         self.helper.form_action = ''
         self.helper.layout = Layout(
