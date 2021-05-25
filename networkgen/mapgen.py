@@ -3,12 +3,19 @@ import io
 import json
 import networkx as nx
 import pandas as pd
+from networkgen.models import Generator as g 
+from networkgen.models import Ligand
+from collections import defaultdict
 from rdkit.Chem.Fingerprints import FingerprintMols
 from rdkit.Chem import AllChem
 from rdkit import Chem
-from rdkit.Chem import Draw
-from networkgen.models import Generator as g 
-from networkgen.models import Ligand
+from rdkit.Chem import rdFMCS
+from rdkit.Chem import rdRGroupDecomposition
+from rdkit.Chem import rdqueries
+from rdkit.Chem import rdDepictor
+from rdkit.Chem.Draw import rdMolDraw2D
+from rdkit import Geometry
+rdDepictor.SetPreferCoordGen(True)
 
 
 class MapGen():
@@ -31,11 +38,205 @@ class MapGen():
         return fp
     
     def get_ligand(self, rdmol):
-        return Ligand(charge=Chem.rdmolops.GetFormalCharge(rdmol), atom_number=len([atom for atom in rdmol.GetAtoms()]), name=rdmol.GetProp('_Name'), SMILES=Chem.MolToSmiles(rdmol, isomericSmiles=True), image=Draw.MolToFile(rdmol,"images/{}.png".format(id),size=(200,250)), network=self.network)
+        n = rdmol.GetProp('_Name')
+        return Ligand(charge=Chem.rdmolops.GetFormalCharge(rdmol), atom_number=len([atom for atom in rdmol.GetAtoms()]), name=n, SMILES=Chem.MolToSmiles(rdmol, isomericSmiles=True), image='networkgen/molimages/{}.png'.format(n), network=self.network)
 
+    def generateImages(self, mol, row, core, width=350, height=200,
+                        fillRings=False,legend="",
+                        sourceIdxProperty="SourceAtomIdx",
+                        lbls=None):
+
+        # copy the molecule and core
+        mol = Chem.Mol(mol)
+        core = Chem.Mol(core)
+
+        # -------------------------------------------
+        # include the atom map numbers in the substructure search in order to 
+        # try to ensure a good alignment of the molecule to symmetric cores
+        for at in core.GetAtoms():
+            if at.GetAtomMapNum():
+                at.ExpandQuery(rdqueries.IsotopeEqualsQueryAtom(200+at.GetAtomMapNum()))
+                
+        for lbl in row:
+            if lbl== 'Core':
+                continue
+            rg = row[lbl]
+            for at in rg.GetAtoms():
+                if not at.GetAtomicNum() and at.GetAtomMapNum() and \
+                at.HasProp('dummyLabel') and at.GetProp('dummyLabel')==lbl:
+                    # attachment point. the atoms connected to this
+                    # should be from the molecule
+                    for nbr in at.GetNeighbors():
+                        if nbr.HasProp(sourceIdxProperty):
+                            mAt = mol.GetAtomWithIdx(nbr.GetIntProp(sourceIdxProperty))
+                            if mAt.GetIsotope():
+                                mAt.SetIntProp('_OrigIsotope',mAt.GetIsotope())
+                            mAt.SetIsotope(200+at.GetAtomMapNum())
+
+        # remove unmapped hs so that they don't mess up the depiction
+        rhps = Chem.RemoveHsParameters()
+        rhps.removeMapped = False
+        tmol = Chem.RemoveHs(mol,rhps)
+        rdDepictor.GenerateDepictionMatching2DStructure(tmol,core)
+
+        oldNewAtomMap={}
+        # reset the original isotope values and account for the fact that
+        # removing the Hs changed atom indices
+        for i,at in enumerate(tmol.GetAtoms()):
+            if at.HasProp(sourceIdxProperty):
+                oldNewAtomMap[at.GetIntProp(sourceIdxProperty)] = i
+                if at.HasProp("_OrigIsotope"):
+                    at.SetIsotope(at.GetIntProp("_OrigIsotope"))
+                    at.ClearProp("_OrigIsotope")
+                else:
+                    at.SetIsotope(0)
+        
+        # ------------------
+        #  set up our colormap
+        #   the three choices here are all "colorblind" colormaps
+        
+        # "Tol" colormap from https://davidmathlogic.com/colorblind
+        colors = [(51,34,136),(17,119,51),(68,170,153),(136,204,238),(221,204,119),(204,102,119),(170,68,153),(136,34,85)]
+        # "IBM" colormap from https://davidmathlogic.com/colorblind
+        colors = [(100,143,255),(120,94,240),(220,38,127),(254,97,0),(255,176,0)]
+        # Okabe_Ito colormap from https://jfly.uni-koeln.de/color/
+        colors = [(230,159,0),(86,180,233),(0,158,115),(240,228,66),(0,114,178),(213,94,0),(204,121,167)]
+        for i,x in enumerate(colors):
+            colors[i] = tuple(y/255 for y in x)
+    
+        #----------------------
+        # Identify and store which atoms, bonds, and rings we'll be highlighting
+        highlightatoms = defaultdict(list)
+        highlightbonds = defaultdict(list)
+        atomrads = {}
+        widthmults = {}
+
+        rings = []
+        # loop over R groups.
+        for i,lbl in enumerate(lbls):    
+            color = colors[i%len(colors)]
+            try:
+                rquery = row[lbl]
+            # we don't know the number of R-groups, so just quit this loop if we've reached the end.
+            except KeyError:
+                continue
+
+            Chem.GetSSSR(rquery)
+            rinfo = rquery.GetRingInfo()
+            for at in rquery.GetAtoms():
+                if at.HasProp(sourceIdxProperty):
+                    origIdx = oldNewAtomMap[at.GetIntProp(sourceIdxProperty)]
+                    highlightatoms[origIdx].append(color)
+                    atomrads[origIdx] = 0.4
+            if fillRings:
+                for aring in rinfo.AtomRings():
+                    tring = []
+                    allFound = True
+                    for aid in aring:
+                        at = rquery.GetAtomWithIdx(aid)
+                        if not at.HasProp(sourceIdxProperty):
+                            allFound = False
+                            break
+                        tring.append(oldNewAtomMap[at.GetIntProp(sourceIdxProperty)])
+                    if allFound:
+                        rings.append((tring,color))
+            for qbnd in rquery.GetBonds():
+                batom = qbnd.GetBeginAtom()
+                eatom = qbnd.GetEndAtom()
+                if batom.HasProp(sourceIdxProperty) and eatom.HasProp(sourceIdxProperty):
+                    origBnd = tmol.GetBondBetweenAtoms(oldNewAtomMap[batom.GetIntProp(sourceIdxProperty)],
+                                                    oldNewAtomMap[eatom.GetIntProp(sourceIdxProperty)])
+                    bndIdx = origBnd.GetIdx()
+                    highlightbonds[bndIdx].append(color)
+                    widthmults[bndIdx] = 2
+
+        d2d = rdMolDraw2D.MolDraw2DCairo(width,height)
+        dos = d2d.drawOptions()
+        dos.useBWAtomPalette()
+                    
+        #----------------------
+        # if we are filling rings, go ahead and do that first so that we draw
+        # the molecule on top of the filled rings
+        if fillRings and rings:
+            # a hack to set the molecule scale
+            d2d.DrawMoleculeWithHighlights(tmol,legend,dict(highlightatoms),
+                                        dict(highlightbonds),
+                                        atomrads,widthmults)
+            d2d.ClearDrawing()
+            conf = tmol.GetConformer()
+            for (aring,color) in rings:
+                ps = []
+                for aidx in aring:
+                    pos = Geometry.Point2D(conf.GetAtomPosition(aidx))
+                    ps.append(pos)
+                d2d.SetFillPolys(True)
+                d2d.SetColour(color)
+                d2d.DrawPolygon(ps)
+            dos.clearBackground = False
+
+        #----------------------
+        # now draw the molecule, with highlights:
+        d2d.DrawMoleculeWithHighlights(tmol,"",dict(highlightatoms),dict(highlightbonds),
+                                    atomrads,widthmults)
+        d2d.FinishDrawing()
+        png = d2d.GetDrawingText()
+
+        # save to file:
+        d2d.WriteDrawingText("static/molimages/{}.png".format(legend))
+            
+        return png
+
+    def writeLigandImages(self):
+        """
+        Takes a list of ligand names and generates .png images in ./data/mol_images/ using RDKit.
+        Workflow mostly based on https://rdkit.blogspot.com/2020/10/molecule-highlighting-and-r-group.html
+        """
+
+        lignames = [self.lig_dict[k]['Name'] for k in self.lig_dict.keys()]
+        lignames = [lig for charge_group in lignames for lig in charge_group] #flatten ligand names
+
+        mols = [self.lig_dict[k]['Mol'] for k in self.lig_dict.keys()]
+        mols = [m for charge_group in mols for m in charge_group] #flatten mols
+
+        if len(lignames) < 2:
+            raise Exception("Number of ligands ({}) should be > 1".format(len(lignames)))
+
+        ################## RDKIT IMAGE GENERATION ################
+        # flatten all ligands into 2D space. Note that most rdkit mol operations are in-place.
+        for m in mols:
+            rdDepictor.Compute2DCoords(m)
+            m.UpdatePropertyCache()
+
+
+        # find the core using standard MCS algorithm. Flatten the core again just to be sure.
+        mcs = rdFMCS.FindMCS(mols, matchValences=False,
+                                        ringMatchesRingOnly=True,
+                                        completeRingsOnly=True,
+                                        matchChiralTag=False)
+
+        core = Chem.MolFromSmarts(mcs.smartsString)
+        rdDepictor.Compute2DCoords(core)
+
+        # find subtructure matches with MCS per ligand, then tag matching atom indices in each ligand.
+        ps = Chem.AdjustQueryParameters.NoAdjustments()
+        ps.makeDummiesQueries=True
+        qcore = Chem.AdjustQueryProperties(core,ps)
+        #mhs = [Chem.AddHs(x,addCoords=True) for x in ms]
+        mms = [x for x in mols if x.HasSubstructMatch(qcore)]
+        for m in mms:
+            for atom in m.GetAtoms():
+                atom.SetIntProp("SourceAtomIdx",atom.GetIdx())
+
+        # do an RDKit R-group decomposition.	
+        groups,_ = rdRGroupDecomposition.RGroupDecompose([qcore],mms,asSmiles=False,asRows=True)
+
+        # call the writer function with each molecule.
+        for i, m in enumerate(mols):
+            png = self.generateImages(m,groups[i],qcore,lbls=('R1','R2','R3','R4', 'R5', 'R6', 'R7'),
+                                    legend=lignames[i],
+                                    width=400,height=400)
 
     def set_ligdict(self):
-        self.lig_dict = {}
         for mol in self.suppl:
             charge = Chem.rdmolops.GetFormalCharge(mol)
             ligand = self.get_ligand(mol)
@@ -45,6 +246,7 @@ class MapGen():
             v['Mol'].append(mol)
             if self.metric != g.MCS:
                 v['FP'].append(self.make_fp(mol))
+        self.writeLigandImages()
 
     def sim_mx(self):
         if self.metric in [g.Tanimoto, g.MFP]:
@@ -63,7 +265,7 @@ class MapGen():
                         if self.metric in [g.Tanimoto, g.MFP]:
                             df.loc[i, j] = DataStructs.FingerprintSimilarity(
                                 item['FP'][index], item['FP'][jndex])
-                        if self.metric == g.Tanimoto:
+                        if self.metric == g.MCS:
                             mcs = rdFMCS.FindMCS(
                                 [item['Mol'][index],
                                  item['Mol'][jndex]],
@@ -84,12 +286,12 @@ class MapGen():
                 self.lig_dict[charge]['df'].loc[i, :] = vlist
 
             if self.metric in [g.Tanimoto, g.MFP]:
-                df = 1 - self.lig_dict[charge]['df']  # get dissimilarity matrix
+                self.lig_dict[charge]['df'] = 1 - self.lig_dict[charge]['df']  # get dissimilarity matrix
 
             if self.metric == g.MCS:
-                df = 100 - self.lig_dict[charge]['df']  # get dissimilarity matrix
-            self.lig_dict[charge]['df'] = df.replace(1.0, 0.0)  # set diagonal to 0
-            self.lig_dict[charge]['df'] = df.replace(0.0, 1.0)  # set zeroes into 1 (in order to search shortest path)
+                self.lig_dict[charge]['df'] = 100 - self.lig_dict[charge]['df']  # get dissimilarity matrix
+            self.lig_dict[charge]['df'] = self.lig_dict[charge]['df'].replace(1.0, 0.0)  # set diagonal to 0
+            self.lig_dict[charge]['df'] = self.lig_dict[charge]['df'].replace(0.0, 1.0)  # set zeroes into 1 (in order to search shortest path)
 
     def set_ligpairs(self):
         for charge in self.lig_dict.keys():
@@ -203,8 +405,7 @@ class MapGen():
         for node in nodes:
             result["nodes"].append(
                 {"label": node,
-                 "image": "",  # TODO: networkgen.js requires an image. Make it
-                               # use some kind of generic image.
+                 "image": "/static/molimages/{}.png".format(node),
                  "id": node})
 
         self.network.network = json.dumps(result)

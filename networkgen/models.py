@@ -37,5 +37,5 @@ class Ligand(models.Model):
     atom_number = models.IntegerField()
     name = models.CharField(max_length=255)
     SMILES = models.CharField(max_length=255)
-    image = models.ImageField(height_field=200, width_field=250)
+    image = models.CharField(max_length=255)
     network = models.ForeignKey("Generator", on_delete=models.CASCADE)
