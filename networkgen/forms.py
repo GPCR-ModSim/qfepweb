@@ -4,6 +4,7 @@ from django.forms import ModelForm
 from networkgen.models import Generator
 from django import forms
 
+
 class GeneratorForm(ModelForm):
     """A base form for the FEP network generator model."""
     def __init__(self, *args, **kwargs):
@@ -14,7 +15,8 @@ class GeneratorForm(ModelForm):
             Fieldset(
                 "FEP network generator parameters",
                 Div(
-                    Div("metric", css_class="col-sm-6"),
+                    Div("in_sdf", css_class="col-sm-12"),
+                    Div("metric", css_class="col-sm-12"),
                     css_class="row")))
 
     class Meta:
@@ -22,7 +24,7 @@ class GeneratorForm(ModelForm):
         model = Generator
         fields = ["metric", "in_sdf"]
         help_texts = {
-            "metric": "Distance metric to compare chemical similarity between ligand pairs",
+            "metric": "Distance metric to compare chemical similarity " +\
+                "between ligand pairs.",
             "in_sdf": "Input .sdf file containing ligands."
         }
-        
