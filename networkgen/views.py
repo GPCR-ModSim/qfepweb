@@ -31,7 +31,7 @@ class GeneratorView(CreateView):
 
     def get_success_url(self):
         return reverse("networkgen:detail", kwargs={"pk": self.object.uuid})
-        
+
 
 class GeneratorDetailView(DetailView):
     """Create a new Database entry with all the parameters required for the FEP network generator.
