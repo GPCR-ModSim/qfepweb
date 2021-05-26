@@ -19,9 +19,9 @@ class MapGen():
     def make_fp(self, mol):
         if self.metric == 'tanimoto':
             fp = FingerprintMols.FingerprintMol(mol)
-        if self.metric == 'mfp':
+        elif self.metric == 'mfp':
             fp = AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=2048)
-        if self.metric == 'smiles':
+        elif self.metric == 'smiles':
             fp = Chem.MolToSmiles(mol, isomericSmiles=True)
         return fp
 
