@@ -1,8 +1,9 @@
 import uuid
 from django.db import models
-
+from django.db.models.fields import CharField
+from django.db.models.fields.files import ImageField
+from django.db.models.fields.related import ForeignKey
 from . import validators
-
 
 class Runner(models.Model):
     """A model to hold each launch/run parameters."""
@@ -54,7 +55,7 @@ class Runner(models.Model):
     # Cysbond is something like 20:150,45:187
     cysbond = models.CharField(max_length=128, blank=True,
                                validators=[validators.validate_cysbond])
-    windows = models.PositiveIntegerField(default=1)
+    windows = models.PositiveIntegerField(default=50)
     system = models.CharField(
         max_length=3, choices=SYSTEM_CHOICES, default=PRO)
     temperatures = models.CharField(max_length=255, blank=True,
@@ -62,7 +63,7 @@ class Runner(models.Model):
     replicates = models.PositiveIntegerField(default=1)
     start = models.CharField(
         max_length=3, choices=START_CHOICES, default=ONE)
-    sphere_radius = models.PositiveIntegerField(default=15)
+    sphere_radius = models.PositiveIntegerField(default=25)
 
     def __str__(self):
         """Return a proper string for the model."""
