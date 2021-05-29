@@ -1,11 +1,13 @@
 """The basic views for this project."""
 import json
+from django.template.response import TemplateResponse
 from django.test import TestCase
 from django.urls import reverse
+from networkgen.forms import GeneratorForm
 
 
 class NetworkGen(TestCase):
-    """Test the landing of the runner pages.
+    """Test the landing of the generator pages.
 
     It should be available to everyone, without account, and a brief
     introdution to what the server does.
@@ -52,3 +54,15 @@ class NetworkGen(TestCase):
 
         for btn in expected_buttons:
             assert btn in page
+
+    def test_the_basic_network_generator_formview(self):
+        from django.template import Context
+        page = self.client.get(reverse('networkgen:create'))
+        token = page.context.get("csrf_token")
+
+        expected = TemplateResponse(
+            page.wsgi_request,
+            "networkgen/generator_form.html",
+            context={"form": GeneratorForm(), "csrf_token": token}).render()
+
+        assert page.content.decode() == expected.content.decode()

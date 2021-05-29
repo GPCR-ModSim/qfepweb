@@ -1,8 +1,10 @@
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import (Div, Fieldset, Layout)
+from crispy_forms.layout import (ButtonHolder, Div, Fieldset, Layout, Submit,
+                                 Reset)
 from django.forms import ModelForm
 from networkgen.models import Generator
 from django import forms
+
 
 class GeneratorForm(ModelForm):
     """A base form for the FEP network generator model."""
@@ -12,17 +14,21 @@ class GeneratorForm(ModelForm):
         self.helper.form_action = ''
         self.helper.layout = Layout(
             Fieldset(
-                "FEP network generator parameters",
+                "Create a network from a Sdf file",
                 Div(
-                    Div("metric", css_class="col-sm-6"),
-                    css_class="row")))
+                    Div("in_sdf", css_class="col-sm-12"),
+                    Div("metric", css_class="col-sm-12"),
+                    css_class="row")),
+            ButtonHolder(
+                Submit("submit", "Submit", css_class="bg-cp1"),
+                Reset("reset", "Reset")))
 
     class Meta:
         """Set the basic config for the FEP network form."""
         model = Generator
         fields = ["metric", "in_sdf"]
         help_texts = {
-            "metric": "Distance metric to compare chemical similarity between ligand pairs",
+            "metric": "Distance metric to compare chemical similarity " +\
+                "between ligand pairs.",
             "in_sdf": "Input .sdf file containing ligands."
         }
-        
