@@ -25,7 +25,6 @@ class MapGen():
         self.metric = metric
         self.network = network_obj
         self.lig_dict = {}
-        self.sim_dfs = {}
         self.simF = None  # The similarity function to calculate distance
                           #  between ligands
         self._set_similarity_function()
@@ -336,9 +335,9 @@ class MapGen():
         for charge, lig in self.lig_dict.items():
             H = nx.Graph()
             lpd = self.lig_dict[charge]['pairs_dict']
-            #print(lpd)
+            simdf = self.lig_dict[charge]['df']
             if len(lig['Name']) == 1:  # In case one ligand is found alone in a charge group
-                ligcol = self.sim_dfs[lig['Name']].sort_values(by=[lig['Name'][0]]) #complete similarity matrix
+                ligcol = simdf[lig['Name']].sort_values(by=[lig['Name'][0]]) #complete similarity matrix
                 H.add_edge(lig['Name'][0], ligcol.index[1])
                 H.add_edge(lig['Name'][0], ligcol.index[2])
                 lig['Graph'] = H
