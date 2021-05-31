@@ -3,9 +3,6 @@ import io
 import json
 import networkx as nx
 import pandas as pd
-from networkgen.models import Generator as g 
-from networkgen.models import Ligand
-from collections import defaultdict
 from rdkit.Chem.Fingerprints import FingerprintMols
 from rdkit.Chem import AllChem
 from rdkit import Chem
@@ -16,6 +13,9 @@ from rdkit.Chem import rdDepictor
 from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit import Geometry
 rdDepictor.SetPreferCoordGen(True)
+from networkgen.models import Generator as g 
+from networkgen.models import Ligand
+from collections import defaultdict
 
 
 class MapGen():
