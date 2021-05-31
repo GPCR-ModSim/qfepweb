@@ -384,7 +384,6 @@ class MapGen():
                             else:
                                 per_len = nlen
                                 break
-            print(len(H.edges()))
             lig['Graph'] = H
 
     def as_json(self):
