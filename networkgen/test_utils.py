@@ -1,10 +1,12 @@
 import io
 from pathlib import Path
-from unittest import TestCase
 
+from django.test import TestCase
 from rdkit.DataStructs import FingerprintSimilarity
+from model_bakery import baker
 
-from runner import mapgen
+from networkgen import mapgen
+from networkgen.models import Generator as g
 
 
 class MapGenerator(TestCase):
@@ -17,6 +19,7 @@ class MapGenerator(TestCase):
     def setUp(self):
         self.sdfPath = Path(__file__).parent / "test_files/CDK2_ligands.sdf"
         self.sdfIo = self.loadSdf(self.sdfPath)
+        self.genObj = baker.make("Generator")
 
     def test_mapgen_can_be_inited_with_io_stream(self):
         m = mapgen.MapGen(in_sdf=self.sdfIo, metric="mfp")
@@ -25,14 +28,14 @@ class MapGenerator(TestCase):
 
     def test_mapgen_can_be_inited_with_string(self):
         """Passing a file path looks more human than passing the io around."""
-        m = mapgen.MapGen(in_sdf=self.sdfPath, metric="mfp")
+        m = mapgen.MapGen(in_sdf=self.sdfPath, metric=g.MFP)
 
-        assert m.metric == "mfp"
-
+        assert m.metric == g.MFP
 
     def test_mapgen_setup_of_ligands(self):
         """After MapGen loads the SDF data, the ligand setup must be called."""
-        m = mapgen.MapGen(in_sdf=self.sdfIo, metric="mfp")
+        m = mapgen.MapGen(in_sdf=self.sdfIo, metric=g.MFP,
+                          network_obj=self.genObj)
         assert m.lig_dict == {}
 
         m.set_ligdict()
@@ -42,17 +45,18 @@ class MapGenerator(TestCase):
         assert len(list(m.lig_dict[0]["Name"])) == 16  # Items in the file
 
     def test_set_the_similarity_function(self):
-        m = mapgen.MapGen(in_sdf=self.sdfIo, metric="mcs")
+        m = mapgen.MapGen(in_sdf=self.sdfIo, metric=g.MCS,
+                          network_obj=self.genObj)
 
         m._set_similarity_function()
         assert m.simF.__name__ == "FindMCS"
 
-        for metric in ["tanimoto", "mfp"]:
+        for metric in [g.Tanimoto, g.MFP]:
             m.metric = metric
             m._set_similarity_function()
             assert m.simF.__name__ == "FingerprintSimilarity"
 
-        m.metric = "smiles"
+        m.metric = g.SMILES
         m._set_similarity_function()
         assert m.simF.__name__ == "globalms"
 
@@ -63,10 +67,13 @@ class MapGenerator(TestCase):
         and the whole web is doomed with bad input.
         """
         ## MFP
-        m = mapgen.MapGen(in_sdf=self.sdfIo, metric="mfp")
+        m = mapgen.MapGen(in_sdf=self.sdfIo, metric="mfp",
+                          network_obj=self.genObj)
 
         assert m.lig_dict == {}
         m.sim_mx()
+
+        print(m.lig_dict)
 
         matrix = m.lig_dict[0]["df"]
         assert matrix.shape == (16, 16)  # A matrix lig x lig
