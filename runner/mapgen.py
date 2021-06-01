@@ -183,8 +183,12 @@ class MapGen():
                         if (l1, l2) not in H.edges or (l2, l1) not in H.edges and intersection(H.edges, pert):
                             H.add_edge(l1, l2, weight=score)
                             nlen = len([v for k,v in nx.eigenvector_centrality(H, max_iter=1000).items() if v < 0.01])
-                            per_len = nlen
-                            break
+                            if nlen > per_len:
+                                H.remove_edge(l1, l2)
+                                continue
+                            else:
+                                per_len = nlen
+                                break
 
             lig['Graph'] = H
 
