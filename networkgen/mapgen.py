@@ -3,9 +3,6 @@ import io
 import json
 import networkx as nx
 import pandas as pd
-from networkgen.models import Generator as g 
-from networkgen.models import Ligand
-from collections import defaultdict
 from rdkit.Chem.Fingerprints import FingerprintMols
 from rdkit.Chem import AllChem
 from rdkit import Chem
@@ -16,6 +13,9 @@ from rdkit.Chem import rdDepictor
 from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit import Geometry
 rdDepictor.SetPreferCoordGen(True)
+from networkgen.models import Generator as g 
+from networkgen.models import Ligand
+from collections import defaultdict
 
 
 class MapGen():
@@ -25,7 +25,9 @@ class MapGen():
         self.metric = metric
         self.network = network_obj
         self.lig_dict = {}
-        self.sim_dfs = {}
+        self.simF = None  # The similarity function to calculate distance
+                          #  between ligands
+        self._set_similarity_function()
 
     def make_fp(self, mol):
         if self.metric == g.Tanimoto:
@@ -36,6 +38,33 @@ class MapGen():
             fp = Chem.MolToSmiles(mol, isomericSmiles=True)
         else: fp = None
         return fp
+
+    def _set_similarity_function(self):
+        """Set the similarity function to be used with selected metric."""
+        if self.metric in [g.Tanimoto, g.MFP]:
+            from rdkit.DataStructs import FingerprintSimilarity as f
+        elif self.metric == g.MCS:
+            from rdkit.Chem.rdFMCS import FindMCS as f
+        elif self.metric == g.SMILES:
+            from Bio.pairwise2 import align
+            f = align.globalms
+
+        self.simF = f
+
+    def _ligands_score(self, data, lig_i, lig_j):
+        """Return a similarity score between lig_i and lig_j using self.simF."""
+        if lig_i == lig_j:
+            return 100.0 if self.metric in [g.SMILES, g.MCS] else 1.0
+        if self.metric in [g.Tanimoto, g.MFP]:
+            return self.simF(data['FP'][lig_i], data['FP'][lig_j])
+        if self.metric == g.MCS:
+            score = self.simF([data['Mol'][lig_i],
+                               data['Mol'][lig_j]],
+                              atomCompare=rdFMCS.AtomCompare.CompareAny)
+            return score.numAtoms + score.numBonds
+        if self.metric == g.SMILES:
+            return (100 - self.simF(
+                data['FP'][lig_i], data['FP'][lig_j], 1, -1, -0.5, -0.05)[0][2]) / 100
     
     def get_ligand(self, rdmol):
         n = rdmol.GetProp('_Name')
@@ -247,71 +276,39 @@ class MapGen():
             if self.metric != g.MCS:
                 v['FP'].append(self.make_fp(mol))
         self.writeLigandImages()
-
+    
     def sim_mx(self):
-        if self.metric in [g.Tanimoto, g.MFP]:
-            from rdkit import DataStructs
-        elif self.metric == g.MCS:
-            from rdkit.Chem import rdFMCS
-        elif self.metric == g.SMILES:
-            from Bio import pairwise2
-        for charge, item in self.lig_dict.items():
+        # Ensure the self.lig_dict has been created
+        if not self.lig_dict:
+            self.set_ligdict()
+        for charge, ligand in self.lig_dict.items():
             df = pd.DataFrame()
-            for index, i in enumerate(item['Name']):
-                for jndex, j in enumerate(item['Name']):
-                    if i == j:
-                        df.loc[i, j] = 1.0
-                    else:
-                        if self.metric in [g.Tanimoto, g.MFP]:
-                            df.loc[i, j] = DataStructs.FingerprintSimilarity(
-                                item['FP'][index], item['FP'][jndex])
-                        if self.metric == g.MCS:
-                            mcs = rdFMCS.FindMCS(
-                                [item['Mol'][index],
-                                 item['Mol'][jndex]],
-                                atomCompare=rdFMCS.AtomCompare.CompareAny)
-                            df.loc[i, j] = mcs.numAtoms + mcs.numBonds
-                        if self.metric == g.SMILES:
-                            alignments = pairwise2.align.globalms(
-                                item['FP'][index], item['FP'][jndex], 1, -1, -0.5, -0.05)
-                            df.loc[i, j] = alignments[0][2]
+            ligands_done = []
+            for i, lig1 in enumerate(ligand['Name']):
+                for j, lig2 in enumerate(ligand['Name']):
+                    if lig2 not in ligands_done:
+                        df.loc[lig2, lig1] = self._ligands_score(ligand, i, j)
+                ligands_done.append(lig1)
             self.lig_dict[charge]['df'] = df
 
-    def clean_mxs(self):
-        for charge in self.lig_dict.keys():
-            for i, j in zip(self.lig_dict[charge]['df'].index, self.lig_dict[charge]['df'].idxmax()):
-                vlist = self.lig_dict[charge]['df'].loc[i, :].tolist()
-                index = vlist.index(1.0)
-                vlist[index:] = [0.0] * len(vlist[index:])
-                self.lig_dict[charge]['df'].loc[i, :] = vlist
-
-            if self.metric in [g.Tanimoto, g.MFP]:
-                self.lig_dict[charge]['df'] = 1 - self.lig_dict[charge]['df']  # get dissimilarity matrix
-
-            if self.metric == g.MCS:
-                self.lig_dict[charge]['df'] = 100 - self.lig_dict[charge]['df']  # get dissimilarity matrix
-            self.lig_dict[charge]['df'] = self.lig_dict[charge]['df'].replace(1.0, 0.0)  # set diagonal to 0
-            self.lig_dict[charge]['df'] = self.lig_dict[charge]['df'].replace(0.0, 1.0)  # set zeroes into 1 (in order to search shortest path)
-
     def set_ligpairs(self):
-        for charge in self.lig_dict.keys():
+        for charge, value in self.lig_dict.items():
             pairs_dict = {}
-            for i in self.lig_dict[charge]['df'].index:
-                for j in self.lig_dict[charge]['df'].columns:
-                    if self.lig_dict[charge]['df'].loc[i, j] != 1.0:
-                        pairs_dict['{} {}'.format(i, j)] = round(self.lig_dict[charge]['df'].loc[i, j], 3)
+            for i in value['df'].index:
+                for j in value['df'].columns:
+                    if value['df'].loc[i, j] not in [1.0, 100] and not pd.isnull(value['df'].loc[i, j]):
+                        pairs_dict['{} {}'.format(i, j)] = round(value['df'].loc[i, j], 3)
 
             if self.metric in [g.Tanimoto, g.MFP, g.MCS]:
-                pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=False)}
-            elif self.metric == g.SMILES:
                 pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=True)}
+            elif self.metric == g.SMILES:
+                pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=False)}
 
-            self.lig_dict[charge]['pairs_dict'] = pairs_dict
+            value['pairs_dict'] = pairs_dict
 
     def process_map(self):
         self.set_ligdict()
         self.sim_mx()
-        self.clean_mxs()
         self.set_ligpairs()
         self.make_map()
         self.as_json()
@@ -337,8 +334,10 @@ class MapGen():
     def make_map(self):
         for charge, lig in self.lig_dict.items():
             H = nx.Graph()
+            lpd = self.lig_dict[charge]['pairs_dict']
+            simdf = self.lig_dict[charge]['df']
             if len(lig['Name']) == 1:  # In case one ligand is found alone in a charge group
-                ligcol = self.sim_dfs[lig['Name']].sort_values(by=[lig['Name'][0]]) #complete similarity matrix
+                ligcol = simdf[lig['Name']].sort_values(by=[lig['Name'][0]]) #complete similarity matrix
                 H.add_edge(lig['Name'][0], ligcol.index[1])
                 H.add_edge(lig['Name'][0], ligcol.index[2])
                 lig['Graph'] = H
@@ -347,7 +346,7 @@ class MapGen():
             # 1. Make SPT
             incomplete = True
             while incomplete:
-                for pert, score in lig['pairs_dict'].items():
+                for pert, score in lpd.items():
                     if len(H.nodes) == len(lig['Name']):
                         incomplete = False
                         break
@@ -360,7 +359,7 @@ class MapGen():
 
             # 2. Close Cycles
             while len(self.outer_nodes(H)) != 0:
-                for pert, score in lig['pairs_dict'].items():
+                for pert, score in lpd.items():
                     l1, l2 = pert.split()[0], pert.split()[1]
                     if l1 in self.outer_nodes(H) or l2 in self.outer_nodes(H):
                         if (l1, l2) not in H.edges or (l2, l1) not in H.edges:
@@ -373,15 +372,18 @@ class MapGen():
             per_nodes = [k for k,v in nx.eigenvector_centrality(H, max_iter=1000).items() if v < 0.01]
             per_len = len(per_nodes)
             while per_len > 1:
-                for pert, score in lig['pairs_dict'].items():
+                for pert, score in lpd.items():
                     l1, l2 = pert.split()[0], pert.split()[1]
                     if l1 in per_nodes and l2 not in per_nodes or l1 not in per_nodes and l2 in per_nodes:
                         if (l1, l2) not in H.edges or (l2, l1) not in H.edges and intersection(H.edges, pert):
                             H.add_edge(l1, l2, weight=score)
                             nlen = len([v for k,v in nx.eigenvector_centrality(H, max_iter=1000).items() if v < 0.01])
-                            per_len = nlen
-                            break
-
+                            if nlen > per_len:
+                                H.remove_edge(l1, l2)
+                                continue
+                            else:
+                                per_len = nlen
+                                break
             lig['Graph'] = H
 
     def as_json(self):
@@ -411,7 +413,7 @@ class MapGen():
         self.network.network = json.dumps(result)
         with open('networkgen/templates/networkgen/graph.json', 'w') as outfile:
             json.dump(result, outfile)
-        return json.dumps(result, indent=2)
+        return json.dumps(result)
 
 
 # The following code is the CLI

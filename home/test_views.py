@@ -17,4 +17,4 @@ class Home(TestCase):
         page = self.client.get(reverse('home:index'))
 
         assert page.status_code == 200
-        assert "QwebFEP" in page.content.decode()  # The title
+        assert "QFEPweb" in page.content.decode()  # The title

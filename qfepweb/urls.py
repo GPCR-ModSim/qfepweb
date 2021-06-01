@@ -21,10 +21,10 @@ from django.urls import include, path
 
 urlpatterns = [
     path('', include('home.urls', namespace='home')),
-    path('admin/', admin.site.urls),
+    path('caretaker/', admin.site.urls),
     path('about/', include('about.urls')),
-    path('r/', include('runner.urls')),
-    path('ng/', include('networkgen.urls')),
+    path('qligfep/', include('runner.urls')),
+    path('netgen/', include('networkgen.urls')),
     path('u/', include('utils.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) +\
     static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
