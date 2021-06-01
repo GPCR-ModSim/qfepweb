@@ -13,14 +13,15 @@ from rdkit.Chem import rdDepictor
 from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit import Geometry
 rdDepictor.SetPreferCoordGen(True)
-from networkgen.models import Generator as g 
+from networkgen.models import Generator as g
 from networkgen.models import Ligand
 from collections import defaultdict
 
 
 class MapGen():
     def __init__(self, in_sdf, metric, network_obj=None):
-        in_sdf.seek(0)
+        if hasattr(in_sdf, "seek"):
+            in_sdf.seek(0)
         self.suppl = Chem.ForwardSDMolSupplier(in_sdf)
         self.metric = metric
         self.network = network_obj
@@ -41,13 +42,14 @@ class MapGen():
 
     def _set_similarity_function(self):
         """Set the similarity function to be used with selected metric."""
+        f = None
         if self.metric in [g.Tanimoto, g.MFP]:
             from rdkit.DataStructs import FingerprintSimilarity as f
         elif self.metric == g.MCS:
             from rdkit.Chem.rdFMCS import FindMCS as f
         elif self.metric == g.SMILES:
-            from Bio.pairwise2 import align
-            f = align.globalms
+            from Bio import pairwise2
+            f = pairwise2.align.globalms
 
         self.simF = f
 
@@ -65,10 +67,15 @@ class MapGen():
         if self.metric == g.SMILES:
             return (100 - self.simF(
                 data['FP'][lig_i], data['FP'][lig_j], 1, -1, -0.5, -0.05)[0][2]) / 100
-    
+
     def get_ligand(self, rdmol):
         n = rdmol.GetProp('_Name')
-        return Ligand(charge=Chem.rdmolops.GetFormalCharge(rdmol), atom_number=len([atom for atom in rdmol.GetAtoms()]), name=n, SMILES=Chem.MolToSmiles(rdmol, isomericSmiles=True), image='networkgen/molimages/{}.png'.format(n), network=self.network)
+        return Ligand(charge=Chem.rdmolops.GetFormalCharge(rdmol),
+                      atom_number=len(rdmol.GetAtoms()),
+                      name=n,
+                      smiles=Chem.MolToSmiles(rdmol, isomericSmiles=True),
+                      image='networkgen/molimages/{}.png'.format(n),
+                      network=self.network)
 
     def generateImages(self, mol, row, core, width=350, height=200,
                         fillRings=False,legend="",
@@ -80,12 +87,12 @@ class MapGen():
         core = Chem.Mol(core)
 
         # -------------------------------------------
-        # include the atom map numbers in the substructure search in order to 
+        # include the atom map numbers in the substructure search in order to
         # try to ensure a good alignment of the molecule to symmetric cores
         for at in core.GetAtoms():
             if at.GetAtomMapNum():
                 at.ExpandQuery(rdqueries.IsotopeEqualsQueryAtom(200+at.GetAtomMapNum()))
-                
+
         for lbl in row:
             if lbl== 'Core':
                 continue
@@ -119,11 +126,11 @@ class MapGen():
                     at.ClearProp("_OrigIsotope")
                 else:
                     at.SetIsotope(0)
-        
+
         # ------------------
         #  set up our colormap
         #   the three choices here are all "colorblind" colormaps
-        
+
         # "Tol" colormap from https://davidmathlogic.com/colorblind
         colors = [(51,34,136),(17,119,51),(68,170,153),(136,204,238),(221,204,119),(204,102,119),(170,68,153),(136,34,85)]
         # "IBM" colormap from https://davidmathlogic.com/colorblind
@@ -132,7 +139,7 @@ class MapGen():
         colors = [(230,159,0),(86,180,233),(0,158,115),(240,228,66),(0,114,178),(213,94,0),(204,121,167)]
         for i,x in enumerate(colors):
             colors[i] = tuple(y/255 for y in x)
-    
+
         #----------------------
         # Identify and store which atoms, bonds, and rings we'll be highlighting
         highlightatoms = defaultdict(list)
@@ -142,7 +149,7 @@ class MapGen():
 
         rings = []
         # loop over R groups.
-        for i,lbl in enumerate(lbls):    
+        for i,lbl in enumerate(lbls):
             color = colors[i%len(colors)]
             try:
                 rquery = row[lbl]
@@ -182,7 +189,7 @@ class MapGen():
         d2d = rdMolDraw2D.MolDraw2DCairo(width,height)
         dos = d2d.drawOptions()
         dos.useBWAtomPalette()
-                    
+
         #----------------------
         # if we are filling rings, go ahead and do that first so that we draw
         # the molecule on top of the filled rings
@@ -212,7 +219,7 @@ class MapGen():
 
         # save to file:
         d2d.WriteDrawingText("static/molimages/{}.png".format(legend))
-            
+
         return png
 
     def writeLigandImages(self):
@@ -256,7 +263,7 @@ class MapGen():
             for atom in m.GetAtoms():
                 atom.SetIntProp("SourceAtomIdx",atom.GetIdx())
 
-        # do an RDKit R-group decomposition.	
+        # do an RDKit R-group decomposition.
         groups,_ = rdRGroupDecomposition.RGroupDecompose([qcore],mms,asSmiles=False,asRows=True)
 
         # call the writer function with each molecule.
@@ -276,7 +283,7 @@ class MapGen():
             if self.metric != g.MCS:
                 v['FP'].append(self.make_fp(mol))
         self.writeLigandImages()
-    
+
     def sim_mx(self):
         # Ensure the self.lig_dict has been created
         if not self.lig_dict:
