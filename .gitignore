@@ -13,7 +13,6 @@ lib
 .vscode
 pyvenv.cfg
 db.sqlite3
-__init__.py
 
 media/
 static/
