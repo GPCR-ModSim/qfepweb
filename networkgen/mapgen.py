@@ -65,8 +65,9 @@ class MapGen():
                               atomCompare=rdFMCS.AtomCompare.CompareAny)
             return score.numAtoms + score.numBonds
         if self.metric == g.SMILES:
-            return (100 - self.simF(
-                data['FP'][lig_i], data['FP'][lig_j], 1, -1, -0.5, -0.05)[0][2]) / 100
+            return self.simF(
+                data['FP'][lig_i], data['FP'][lig_j],
+                1, -1, -0.5, -0.05)[0].score
 
     def get_ligand(self, rdmol):
         n = rdmol.GetProp('_Name')

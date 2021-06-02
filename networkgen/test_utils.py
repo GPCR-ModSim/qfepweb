@@ -67,13 +67,11 @@ class MapGenerator(TestCase):
         and the whole web is doomed with bad input.
         """
         ## MFP
-        m = mapgen.MapGen(in_sdf=self.sdfIo, metric="mfp",
+        m = mapgen.MapGen(in_sdf=self.sdfIo, metric=g.MFP,
                           network_obj=self.genObj)
 
         assert m.lig_dict == {}
         m.sim_mx()
-
-        print(m.lig_dict)
 
         matrix = m.lig_dict[0]["df"]
         assert matrix.shape == (16, 16)  # A matrix lig x lig
@@ -87,7 +85,8 @@ class MapGenerator(TestCase):
 
         # Tanimoto
         self.sdfIo.seek(0)
-        m = mapgen.MapGen(in_sdf=self.sdfIo, metric="tanimoto")
+        m = mapgen.MapGen(in_sdf=self.sdfIo, metric=g.Tanimoto,
+                          network_obj=self.genObj)
 
         m.sim_mx()
 
@@ -103,7 +102,8 @@ class MapGenerator(TestCase):
 
         # Smiles
         self.sdfIo.seek(0)
-        m = mapgen.MapGen(in_sdf=self.sdfIo, metric="smiles")
+        m = mapgen.MapGen(in_sdf=self.sdfIo, metric=g.SMILES,
+                          network_obj=self.genObj)
 
         m.sim_mx()
 
@@ -121,7 +121,8 @@ class MapGenerator(TestCase):
 
         # MCS
         self.sdfIo.seek(0)
-        m = mapgen.MapGen(in_sdf=self.sdfIo, metric="mcs")
+        m = mapgen.MapGen(in_sdf=self.sdfIo, metric=g.MCS,
+                          network_obj=self.genObj)
 
         m.sim_mx()
 
