@@ -8,7 +8,7 @@ from networkgen.models import Generator as g
 class GeneratorForm(TestCase):
     """Test the Generator Input Form"""
     def setUp(self):
-        in_sdf = Path(__file__).parent / "test_data" / "One_ligand.sdf"
+        in_sdf = Path(__file__).parent / "test_files" / "One_ligand.sdf"
         with open(in_sdf, "rb") as inFile:
             content = inFile.read()
 
