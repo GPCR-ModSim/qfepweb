@@ -253,10 +253,10 @@ class MapGen():
         self.network = network_obj
         self.metric = network_obj.metric
         self.ligands = {}
-        self.simF = None  # FIXME The similarity function to calculate distance
-                          #  between ligands
+        self.simF = None
         self.molecules = None
         self.mcs = None
+
         self._set_ligands()
         self._set_similarity_function()
         self._set_mcs_core()
@@ -308,32 +308,6 @@ class MapGen():
             return self.simF(
                 data['FP'][lig_i], data['FP'][lig_j],
                 1, -1, -0.5, -0.05)[0].score
-
-    def _flattenLigands(self):
-        """Flatten all ligands into 2D space."""
-        for m in self.molecules:
-            rdDepictor.Compute2DCoords(m)
-            m.UpdatePropertyCache()
-
-    def _rGroupDecompose(self):
-        """Decompose the ligands into their Rgroups"""
-        core = Chem.MolFromSmarts(self.mcs.smartsString)
-        rdDepictor.Compute2DCoords(core)
-        ps = Chem.AdjustQueryParameters.NoAdjustments()
-        ps.makeDummiesQueries = True
-        qcore = Chem.AdjustQueryProperties(core, ps)
-
-        matches = [_ for _ in self.molecules if _.HasSubstructMatch(qcore)]
-        for m in matches:
-            for atom in m.GetAtoms():
-                atom.SetIntProp("SourceAtomIdx", atom.GetIdx())
-
-        # Groups is a dict of sub-molecules divided into {"Core": Mol,
-        #  "R1": Mol2, "R2": Mol3...}
-        self.groups, _ = rdRGroupDecomposition.RGroupDecompose(
-            [qcore], matches, asSmiles=False, asRows=True)
-
-        return qcore
 
     def save_ligands(self):
         """Save the ligands as objects in the DB.
