@@ -2,18 +2,15 @@ import argparse
 from functools import lru_cache
 import io
 import json
+from pathlib import Path
 
+from django.conf import settings
 import networkx as nx
 import pandas as pd
-from rdkit.Chem.Fingerprints import FingerprintMols
-from rdkit.Chem import AllChem
-from rdkit import Chem
-from rdkit.Chem import rdFMCS
-from rdkit.Chem import rdRGroupDecomposition
-from rdkit.Chem import rdqueries
-from rdkit.Chem import rdDepictor
+from rdkit import Chem, DataStructs, Geometry
+from rdkit.Chem import (AllChem, Fingerprints, rdDepictor, rdFMCS, rdqueries,
+                        rdRGroupDecomposition)
 from rdkit.Chem.Draw import rdMolDraw2D
-from rdkit import Geometry
 rdDepictor.SetPreferCoordGen(True)
 
 from networkgen.models import Generator as g
@@ -264,14 +261,14 @@ class MapGen():
         self._set_ligands()
         self._set_similarity_function()
         self._set_mcs_core()
+        self._set_similarity_matrix()
 
     def fingerprint(self, molecule):
         if self.metric == g.Tanimoto:
-            return FingerprintMols.FingerprintMol(molecule)
+            return Fingerprints.FingerprintMols.FingerprintMol(molecule)
         elif self.metric == g.MFP:
-            return AllChem.GetMorganFingerprintAsBitVect(molecule,
-                                                         2,
-                                                         nBits=2048)
+            return AllChem.GetMorganFingerprintAsBitVect(
+                molecule, 2, nBits=2048)
         elif self.metric == g.SMILES:
             return Chem.MolToSmiles(molecule, isomericSmiles=True)
 
@@ -289,16 +286,13 @@ class MapGen():
 
     def _set_similarity_function(self):
         """Set the similarity function to be used with selected metric."""
-        f = None
         if self.metric in [g.Tanimoto, g.MFP]:
-            from rdkit.DataStructs import FingerprintSimilarity as f
+            self.simF = DataStructs.FingerprintSimilarity
         elif self.metric == g.MCS:
-            from rdkit.Chem.rdFMCS import FindMCS as f
+            self.simF = Chem.rdFMCS.FindMCS
         elif self.metric == g.SMILES:
             from Bio import pairwise2
-            f = pairwise2.align.globalms
-
-        self.simF = f
+            self.simF = pairwise2.align.globalms
 
     def _ligands_score(self, data, lig_i, lig_j):
         """Return a similarity score between lig_i and lig_j using self.simF."""
@@ -315,16 +309,6 @@ class MapGen():
             return self.simF(
                 data['FP'][lig_i], data['FP'][lig_j],
                 1, -1, -0.5, -0.05)[0].score
-
-    def get_ligand(self, rdmol):
-        n = rdmol.GetProp('_Name')
-        return Ligand(charge=Chem.rdmolops.GetFormalCharge(rdmol),
-                      atom_number=len(rdmol.GetAtoms()),
-                      name=n,
-                      smiles=Chem.MolToSmiles(rdmol, isomericSmiles=True),
-                      image='networkgen/molimages/{}.png'.format(n),
-                      network=self.network)
-
 
     def _flattenLigands(self):
         """Flatten all ligands into 2D space."""
@@ -352,39 +336,48 @@ class MapGen():
 
         return qcore
 
-    def image_ligands(self):
-        """Creates an image per ligand, and then create the Ligand objects."""
+    def save_ligands(self):
+        """Save the ligands as objects in the DB.
+
+        Only after proper calculations, all data is ready to be saved."""
+
         if len(self.molecules) < 2:
             # FIXME: How does it work throwing an exception while serving?
             raise Exception(f"Number of ligands ({len(lignames)}) must be > 1")
 
-        images = []
+        img_dir = Path(f"{settings.MEDIA_ROOT}") / "molimages"
+        img_dir.mkdir(exist_ok=True)
+
+        ligands = []
         for molecule in self.molecules:
             moleculeImage = MoleculeImage(molecule=molecule, core=self.mcs)
-            images.append((moleculeImage.name, moleculeImage.png()))
+            ligand = Ligand(
+                charge=Chem.rdmolops.GetFormalCharge(molecule),
+                atom_number=len(molecule.GetAtoms()),
+                name=moleculeImage.name,
+                smiles=Chem.MolToSmiles(molecule, isomericSmiles=True),
+                #image=f'networkgen/molimages/{moleculeImage.name}.png',
+                network=self.network)
 
-        return images
-        #for group, molecule in zip(self.groups, self.molecules):
-        #    png = self.generateImages(molecule,
-        #                              group,
-        #                              qcore,
-        #                              lbls=('R1','R2','R3','R4', 'R5', 'R6', 'R7'),
-        #                              legend=molecule.GetProp("_Name"),
-        #                              width=400,
-        #                              height=400)
+            ligand.image = str(img_dir / f"{ligand.uuid}.png")
+            with open(ligand.image.path, "wb") as png:
+                png.write(moleculeImage.png())
+
+            ligands.append(ligand)
+
+        return Ligand.objects.bulk_create(ligands)
+
 
     def _set_ligands(self):
         for mol in self.suppl:
             charge = Chem.rdmolops.GetFormalCharge(mol)
-            ligand = self.get_ligand(mol)  # FIXME: out
-            ligand.save()                  # FIXME: out
             v = self.ligands.setdefault(charge, {'Name': [], 'Mol': [], 'FP': []})
             v['Name'].append(mol.GetProp('_Name'))
             v['Mol'].append(mol)
             if self.metric != g.MCS:
                 v['FP'].append(self.fingerprint(mol))
 
-    def sim_mx(self):
+    def _set_similarity_matrix(self):
         # Ensure the self.ligands has been created
         if not self.ligands:
             self.set_ligands()
@@ -414,7 +407,7 @@ class MapGen():
             value['pairs_dict'] = pairs_dict
 
     def process_map(self):
-        self.sim_mx()
+        self._set_similarity_matrix()
         self.set_ligpairs()
         self.make_map()
         self.as_json()

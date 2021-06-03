@@ -1,14 +1,14 @@
 import io
 from pathlib import Path
 
-from django.test import TestCase
+from django.test import override_settings, TestCase
 from model_bakery import baker
 import pytest
 from rdkit import Chem
 from rdkit.DataStructs import FingerprintSimilarity
 
 from networkgen import mapgen
-from networkgen.models import Generator as g
+from networkgen.models import Generator as g, Ligand
 
 
 class MapGenerator(TestCase):
@@ -19,9 +19,22 @@ class MapGenerator(TestCase):
             return io.BytesIO(f.read())
 
     def setUp(self):
-        self.sdfPath = Path(__file__).parent / "test_files/CDK2_ligands.sdf"
+        self.sdfPath = Path(__file__).parent / "test_files" / "CDK2_ligands.sdf"
         self.sdfIo = self.loadSdf(self.sdfPath)
         self.genObj = baker.make("Generator")
+        self.img_dir = Path(__file__).parent / "test_files" / "media"
+        self.img_dir.mkdir(exist_ok=True)
+
+    def tearDown(self):
+        for f in Path(self.img_dir).iterdir():
+            try:
+                f.unlink()
+            except IsADirectoryError:
+                for img in f.iterdir():
+                    img.unlink()
+                f.rmdir()
+
+        Path(self.img_dir).rmdir()
 
     def test_mapgen_can_be_inited_with_io_stream(self):
         m = mapgen.MapGen(in_sdf=self.sdfIo, metric=g.MFP,
@@ -42,7 +55,7 @@ class MapGenerator(TestCase):
                           network_obj=self.genObj)
 
         assert list(m.ligands.keys()) == [0]
-        assert list(m.ligands[0].keys()) == ["Name", "Mol", "FP"]
+        assert list(m.ligands[0].keys()) == ["Name", "Mol", "FP", "df"]
         assert len(list(m.ligands[0]["Name"])) == 16  # Items in the file
 
     def test_set_the_similarity_function(self):
@@ -71,8 +84,6 @@ class MapGenerator(TestCase):
         m = mapgen.MapGen(in_sdf=self.sdfIo, metric=g.MFP,
                           network_obj=self.genObj)
 
-        m.sim_mx()
-
         matrix = m.ligands[0]["df"]
         assert matrix.shape == (16, 16)  # A matrix lig x lig
         # Only the down triangle is calculated
@@ -89,8 +100,6 @@ class MapGenerator(TestCase):
         self.sdfIo.seek(0)
         m = mapgen.MapGen(in_sdf=self.sdfIo, metric=g.Tanimoto,
                           network_obj=self.genObj)
-
-        m.sim_mx()
 
         matrix = m.ligands[0]["df"]
         assert matrix.shape == (16, 16)
@@ -110,8 +119,6 @@ class MapGenerator(TestCase):
         self.sdfIo.seek(0)
         m = mapgen.MapGen(in_sdf=self.sdfIo, metric=g.SMILES,
                           network_obj=self.genObj)
-
-        m.sim_mx()
 
         matrix = m.ligands[0]["df"]
         assert matrix.shape == (16, 16)
@@ -133,8 +140,6 @@ class MapGenerator(TestCase):
         self.sdfIo.seek(0)
         m = mapgen.MapGen(in_sdf=self.sdfIo, metric=g.MCS,
                           network_obj=self.genObj)
-
-        m.sim_mx()
 
         matrix = m.ligands[0]["df"]
         assert matrix.shape == (16, 16)
@@ -172,13 +177,17 @@ class MapGenerator(TestCase):
             '30', '28', '1oiy', '1oi9', '32', '1oiu', '29', '1h1r', '21', '26',
             '1h1s', '31', '20', '22', '17', '1h1q']
 
+    @override_settings(MEDIA_ROOT=Path(__file__).parent / "test_files" / "media")
     def test_network_image_builder(self):
         """Test that the class can build the images for the objects."""
         m = mapgen.MapGen(in_sdf=self.sdfIo, metric=g.MFP,
                           network_obj=self.genObj)
-        m.sim_mx()
-        images = m.image_ligands()
-        assert len(images) == 16
+
+        assert Ligand.objects.count() == 0
+        ligands = m.save_ligands()
+        assert Ligand.objects.count() == 16
+
+        assert ligands[0].image.width == 400
 
 class ImageGenerator(TestCase):
     """A class for creating molecule images."""
