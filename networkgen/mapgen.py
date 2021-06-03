@@ -14,8 +14,7 @@ from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit.Chem.Fingerprints import FingerprintMols
 rdDepictor.SetPreferCoordGen(True)
 
-from networkgen.models import Generator as g
-from networkgen.models import Ligand
+#from networkgen.models import Ligand
 
 
 @lru_cache(maxsize=4)
@@ -263,12 +262,12 @@ class MapGen():
         self._set_similarity_matrix()
 
     def fingerprint(self, molecule):
-        if self.metric == g.Tanimoto:
+        if self.metric == self.network.Tanimoto:
             return FingerprintMols.FingerprintMol(molecule)
-        elif self.metric == g.MFP:
+        elif self.metric == self.network.MFP:
             return AllChem.GetMorganFingerprintAsBitVect(
                 molecule, 2, nBits=2048)
-        elif self.metric == g.SMILES:
+        elif self.metric == self.network.SMILES:
             return Chem.MolToSmiles(molecule, isomericSmiles=True)
 
     def _set_mcs_core(self):
@@ -285,26 +284,26 @@ class MapGen():
 
     def _set_similarity_function(self):
         """Set the similarity function to be used with selected metric."""
-        if self.metric in [g.Tanimoto, g.MFP]:
+        if self.metric in [self.network.Tanimoto, self.network.MFP]:
             self.simF = DataStructs.FingerprintSimilarity
-        elif self.metric == g.MCS:
+        elif self.metric == self.network.MCS:
             self.simF = Chem.rdFMCS.FindMCS
-        elif self.metric == g.SMILES:
+        elif self.metric == self.network.SMILES:
             from Bio import pairwise2
             self.simF = pairwise2.align.globalms
 
     def _ligands_score(self, data, lig_i, lig_j):
         """Return a similarity score between lig_i and lig_j using self.simF."""
         if lig_i == lig_j:
-            return 100.0 if self.metric in [g.SMILES, g.MCS] else 1.0
-        if self.metric in [g.Tanimoto, g.MFP]:
+            return 100.0 if self.metric in [self.network.SMILES, self.network.MCS] else 1.0
+        if self.metric in [self.network.Tanimoto, self.network.MFP]:
             return self.simF(data['FP'][lig_i], data['FP'][lig_j])
-        if self.metric == g.MCS:
+        if self.metric == self.network.MCS:
             score = self.simF([data['Mol'][lig_i],
                                data['Mol'][lig_j]],
                               atomCompare=rdFMCS.AtomCompare.CompareAny)
             return score.numAtoms + score.numBonds
-        if self.metric == g.SMILES:
+        if self.metric == self.network.SMILES:
             return self.simF(
                 data['FP'][lig_i], data['FP'][lig_j],
                 1, -1, -0.5, -0.05)[0].score
@@ -314,31 +313,30 @@ class MapGen():
 
         Only after proper calculations, all data is ready to be saved."""
 
-        if len(self.molecules) < 2:
-            # FIXME: How does it work throwing an exception while serving?
-            raise Exception(f"Number of ligands ({len(lignames)}) must be > 1")
+        # if len(self.molecules) < 2:
+        #     # FIXME: How does it work throwing an exception while serving?
+        #     raise Exception(f"Number of ligands ({len(lignames)}) must be > 1")
 
-        img_dir = Path(f"{settings.MEDIA_ROOT}") / "molimages"
-        img_dir.mkdir(exist_ok=True)
+        # img_dir = Path(f"{settings.MEDIA_ROOT}") / "molimages"
+        # img_dir.mkdir(exist_ok=True)
 
-        ligands = []
-        for molecule in self.molecules:
-            moleculeImage = MoleculeImage(molecule=molecule, core=self.mcs)
-            ligand = Ligand(
-                charge=Chem.rdmolops.GetFormalCharge(molecule),
-                atom_number=len(molecule.GetAtoms()),
-                name=moleculeImage.name,
-                smiles=Chem.MolToSmiles(molecule, isomericSmiles=True),
-                #image=f'networkgen/molimages/{moleculeImage.name}.png',
-                network=self.network)
+        # ligands = []
+        # for molecule in self.molecules:
+        #     moleculeImage = MoleculeImage(molecule=molecule, core=self.mcs)
+        #     ligand = Ligand(
+        #         charge=Chem.rdmolops.GetFormalCharge(molecule),
+        #         atom_number=len(molecule.GetAtoms()),
+        #         name=moleculeImage.name,
+        #         smiles=Chem.MolToSmiles(molecule, isomericSmiles=True),
+        #         network=self.network)
 
-            ligand.image = str(img_dir / f"{ligand.uuid}.png")
-            with open(ligand.image.path, "wb") as png:
-                png.write(moleculeImage.png())
+        #     ligand.image = str(img_dir / f"{ligand.uuid}.png")
+        #     with open(ligand.image.path, "wb") as png:
+        #         png.write(moleculeImage.png())
 
-            ligands.append(ligand)
+        #     ligands.append(ligand)
 
-        return Ligand.objects.bulk_create(ligands)
+        # return Ligand.objects.bulk_create(ligands)
 
     def _set_ligands(self):
         for mol in self.suppl:
@@ -346,7 +344,7 @@ class MapGen():
             v = self.ligands.setdefault(charge, {'Name': [], 'Mol': [], 'FP': []})
             v['Name'].append(mol.GetProp('_Name'))
             v['Mol'].append(mol)
-            if self.metric != g.MCS:
+            if self.metric != self.network.MCS:
                 v['FP'].append(self.fingerprint(mol))
 
     def _set_similarity_matrix(self):
@@ -371,9 +369,9 @@ class MapGen():
                     if value['df'].loc[i, j] not in [1.0, 100] and not pd.isnull(value['df'].loc[i, j]):
                         pairs_dict['{} {}'.format(i, j)] = round(value['df'].loc[i, j], 3)
 
-            if self.metric in [g.Tanimoto, g.MFP, g.MCS]:
+            if self.metric in [self.network.Tanimoto, self.network.MFP, self.network.MCS]:
                 pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=True)}
-            elif self.metric == g.SMILES:
+            elif self.metric == self.network.SMILES:
                 pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=False)}
 
             value['pairs_dict'] = pairs_dict
@@ -382,7 +380,6 @@ class MapGen():
         self._set_similarity_matrix()
         self.set_ligpairs()
         self.make_map()
-        self.as_json()
 
     def intersection(self, edge_list, candidate_edge):
         r1, r2 = candidate_edge.split()[0], candidate_edge.split()[1]
@@ -404,6 +401,9 @@ class MapGen():
 
     def make_map(self):
         for charge, lig in self.ligands.items():
+            if "pairs_dict" not in lig:
+                # Call set_ligpairs the first iteration if it wasn't called before
+                self.set_ligpairs()
             H = nx.Graph()
             lpd = self.ligands[charge]['pairs_dict']
             simdf = self.ligands[charge]['df']
@@ -457,35 +457,6 @@ class MapGen():
                                 break
             lig['Graph'] = H
 
-    def as_json(self):
-        ## Return the nodes and edges of the graph as a Json string
-        ##  The "keys" are lists of compatible keys for edges and nodes as read
-        ##  at /networkgen/static/js/networkgen.js
-        edge_keys = ["label", "freenrg", "sem", "crashes", "from", "to"]
-        node_keys = ["shape", "label", "image", "id"]
-        nodes = set([])
-        result = {"nodes": [], "edges": []}
-
-        for charge, lig in self.ligands.items():
-            # Add unique nodes for this charge to the final nodes
-            nodes = nodes | set(
-                [node for edge in lig['Graph'].edges for node in edge])
-            for edge in lig['Graph'].edges:
-                result["edges"].append(
-                    {"from": edge[0],
-                     "to": edge[1]})
-
-        for node in nodes:
-            result["nodes"].append(
-                {"label": node,
-                 "image": "/static/molimages/{}.png".format(node),
-                 "id": node})
-
-        self.network.network = json.dumps(result)
-        with open('networkgen/templates/networkgen/graph.json', 'w') as outfile:
-            json.dump(result, outfile)
-        return json.dumps(result)
-
 
 # The following code is the CLI
 def getParser():
@@ -513,8 +484,6 @@ def main():
         with io.BytesIO(f.read()) as fio:
             mg = MapGen(fio, args.metric)
             mg.process_map()
-    print(mg.as_json())  # TODO: This gets printed, but should go into some
-                         # model field.
 
 if __name__ == "__main__":
     main()

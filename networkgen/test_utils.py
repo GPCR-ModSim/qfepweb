@@ -1,14 +1,15 @@
 import io
+import json
 from pathlib import Path
+from uuid import UUID
 
-from django.test import override_settings, TestCase
+from django.test import TestCase
 from model_bakery import baker
 import pytest
 from rdkit import Chem
 from rdkit.DataStructs import FingerprintSimilarity
 
 from networkgen import mapgen
-from networkgen.models import Generator as g, Ligand
 
 
 class MapGenerator(TestCase):
@@ -21,31 +22,18 @@ class MapGenerator(TestCase):
     def setUp(self):
         self.sdfPath = Path(__file__).parent / "test_files" / "CDK2_ligands.sdf"
         self.sdfIo = self.loadSdf(self.sdfPath)
-        self.genObj = baker.make("Generator")
-        self.img_dir = Path(__file__).parent / "test_files" / "media"
-        self.img_dir.mkdir(exist_ok=True)
-
-    def tearDown(self):
-        for f in Path(self.img_dir).iterdir():
-            try:
-                f.unlink()
-            except IsADirectoryError:
-                for img in f.iterdir():
-                    img.unlink()
-                f.rmdir()
-
-        Path(self.img_dir).rmdir()
+        self.genObj = baker.make_recipe("networkgen.network")
 
     def test_mapgen_can_be_inited_with_io_stream(self):
         m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
 
-        assert m.metric == g.MFP
+        assert m.metric == self.genObj.MFP
 
     def test_mapgen_can_be_inited_with_string(self):
         """Passing a file path looks more human than passing the io around."""
         m = mapgen.MapGen(in_sdf=self.sdfPath, network_obj=self.genObj)
 
-        assert m.metric == g.MFP
+        assert m.metric == self.genObj.MFP
 
     def test_mapgen_setup_of_ligands(self):
         """After MapGen loads the SDF data, the ligand setup must be called."""
@@ -56,18 +44,18 @@ class MapGenerator(TestCase):
         assert len(list(m.ligands[0]["Name"])) == 16  # Items in the file
 
     def test_set_the_similarity_function(self):
-        self.genObj.metric = g.MCS
+        self.genObj.metric = self.genObj.MCS
         m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
 
         m._set_similarity_function()
         assert m.simF.__name__ == "FindMCS"
 
-        for metric in [g.Tanimoto, g.MFP]:
+        for metric in [self.genObj.Tanimoto, self.genObj.MFP]:
             m.metric = metric
             m._set_similarity_function()
             assert m.simF.__name__ == "FingerprintSimilarity"
 
-        m.metric = g.SMILES
+        m.metric = self.genObj.SMILES
         m._set_similarity_function()
         assert m.simF.__name__ == "globalms"
 
@@ -93,7 +81,7 @@ class MapGenerator(TestCase):
     def test_simmilarity_matrix_tanimoto(self):
         # Tanimoto
         self.sdfIo.seek(0)
-        self.genObj.metric = g.Tanimoto
+        self.genObj.metric = self.genObj.Tanimoto
         m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
 
         matrix = m.ligands[0]["df"]
@@ -111,7 +99,7 @@ class MapGenerator(TestCase):
         forever."""
         # Smiles
         self.sdfIo.seek(0)
-        self.genObj.metric = g.SMILES
+        self.genObj.metric = self.genObj.SMILES
         m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
 
         matrix = m.ligands[0]["df"]
@@ -131,7 +119,7 @@ class MapGenerator(TestCase):
         forever."""
         # MCS
         self.sdfIo.seek(0)
-        self.genObj.metric = g.MCS
+        self.genObj.metric = self.genObj.MCS
         m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
 
         matrix = m.ligands[0]["df"]
@@ -168,16 +156,6 @@ class MapGenerator(TestCase):
             '30', '28', '1oiy', '1oi9', '32', '1oiu', '29', '1h1r', '21', '26',
             '1h1s', '31', '20', '22', '17', '1h1q']
 
-    @override_settings(MEDIA_ROOT=Path(__file__).parent / "test_files" / "media")
-    def test_network_image_builder(self):
-        """Test that the class can build the images for the objects."""
-        m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
-
-        assert Ligand.objects.count() == 0
-        ligands = m.save_ligands()
-        assert Ligand.objects.count() == 16
-
-        assert ligands[0].image.width == 400
 
 class ImageGenerator(TestCase):
     """A class for creating molecule images."""
