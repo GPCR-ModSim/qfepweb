@@ -1,20 +1,15 @@
 import argparse
 from functools import lru_cache
 import io
-import json
-from pathlib import Path
 
-from django.conf import settings
 import networkx as nx
 import pandas as pd
 from rdkit import Chem, DataStructs, Geometry
-from rdkit.Chem import (AllChem, Fingerprints, rdDepictor, rdFMCS, rdqueries,
+from rdkit.Chem import (AllChem, rdDepictor, rdFMCS, rdqueries,
                         rdRGroupDecomposition)
 from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit.Chem.Fingerprints import FingerprintMols
 rdDepictor.SetPreferCoordGen(True)
-
-#from networkgen.models import Ligand
 
 
 @lru_cache(maxsize=4)
@@ -307,36 +302,6 @@ class MapGen():
             return self.simF(
                 data['FP'][lig_i], data['FP'][lig_j],
                 1, -1, -0.5, -0.05)[0].score
-
-    def save_ligands(self):
-        """Save the ligands as objects in the DB.
-
-        Only after proper calculations, all data is ready to be saved."""
-
-        # if len(self.molecules) < 2:
-        #     # FIXME: How does it work throwing an exception while serving?
-        #     raise Exception(f"Number of ligands ({len(lignames)}) must be > 1")
-
-        # img_dir = Path(f"{settings.MEDIA_ROOT}") / "molimages"
-        # img_dir.mkdir(exist_ok=True)
-
-        # ligands = []
-        # for molecule in self.molecules:
-        #     moleculeImage = MoleculeImage(molecule=molecule, core=self.mcs)
-        #     ligand = Ligand(
-        #         charge=Chem.rdmolops.GetFormalCharge(molecule),
-        #         atom_number=len(molecule.GetAtoms()),
-        #         name=moleculeImage.name,
-        #         smiles=Chem.MolToSmiles(molecule, isomericSmiles=True),
-        #         network=self.network)
-
-        #     ligand.image = str(img_dir / f"{ligand.uuid}.png")
-        #     with open(ligand.image.path, "wb") as png:
-        #         png.write(moleculeImage.png())
-
-        #     ligands.append(ligand)
-
-        # return Ligand.objects.bulk_create(ligands)
 
     def _set_ligands(self):
         for mol in self.suppl:

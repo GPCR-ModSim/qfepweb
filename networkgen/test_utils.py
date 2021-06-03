@@ -5,7 +5,6 @@ from uuid import UUID
 
 from django.test import TestCase
 from model_bakery import baker
-import pytest
 from rdkit import Chem
 from rdkit.DataStructs import FingerprintSimilarity
 

@@ -56,7 +56,6 @@ class NetworkGen(TestCase):
             assert btn in page
 
     def test_the_basic_network_generator_formview(self):
-        from django.template import Context
         page = self.client.get(reverse('networkgen:create'))
         token = page.context.get("csrf_token")
 

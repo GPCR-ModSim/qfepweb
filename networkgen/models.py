@@ -3,7 +3,7 @@ from os import name
 from pathlib import Path
 import uuid
 from django.conf import settings
-from django.core.files import File
+#from django.core.files import File
 from django.db import models
 from django.urls import reverse
 from django_extensions.db.models import TimeStampedModel
