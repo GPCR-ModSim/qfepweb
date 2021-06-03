@@ -11,6 +11,7 @@ from rdkit import Chem, DataStructs, Geometry
 from rdkit.Chem import (AllChem, Fingerprints, rdDepictor, rdFMCS, rdqueries,
                         rdRGroupDecomposition)
 from rdkit.Chem.Draw import rdMolDraw2D
+from rdkit.Chem.Fingerprints import FingerprintMols
 rdDepictor.SetPreferCoordGen(True)
 
 from networkgen.models import Generator as g
@@ -238,21 +239,19 @@ class MoleculeImage:
         self.canvas.DrawMoleculeWithHighlights(self.draw_mol, "", *highlights)
         self.canvas.FinishDrawing()
 
-        return self.canvas.GetDrawingText()
-
-        # save to file:
-        # self.canvas.WriteDrawingText(f"{self.name}.png")
+        return self.canvas.GetDrawingText()  # This is a Png as a b"" string
 
 
 class MapGen():
-    def __init__(self, in_sdf, metric, network_obj=None):
+    def __init__(self, in_sdf, network_obj=None):
         if hasattr(in_sdf, "seek"):
             in_sdf.seek(0)
             self.suppl = Chem.ForwardSDMolSupplier(in_sdf)
         else:
             self.suppl = Chem.SDMolSupplier(str(in_sdf))
-        self.metric = metric
+
         self.network = network_obj
+        self.metric = network_obj.metric
         self.ligands = {}
         self.simF = None  # FIXME The similarity function to calculate distance
                           #  between ligands
@@ -265,7 +264,7 @@ class MapGen():
 
     def fingerprint(self, molecule):
         if self.metric == g.Tanimoto:
-            return Fingerprints.FingerprintMols.FingerprintMol(molecule)
+            return FingerprintMols.FingerprintMol(molecule)
         elif self.metric == g.MFP:
             return AllChem.GetMorganFingerprintAsBitVect(
                 molecule, 2, nBits=2048)
@@ -366,7 +365,6 @@ class MapGen():
             ligands.append(ligand)
 
         return Ligand.objects.bulk_create(ligands)
-
 
     def _set_ligands(self):
         for mol in self.suppl:
