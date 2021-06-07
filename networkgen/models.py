@@ -109,6 +109,13 @@ class Generator(TimeStampedModel):
             # Do this only the first time is saved
             self.build_network()
 
+        # At this point, Sdf has been already used: delete it from disk
+        # DEBUG: Although it seems that it never gets written, weird...
+        try:
+            Path(self.in_sdf.path).unlink()
+        except:
+            logger.error(f"Couldn't delete SDF for {self} ({self.in_sdf})")
+
         return result
 
     def get_absolute_url(self):

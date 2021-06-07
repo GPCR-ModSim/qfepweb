@@ -271,6 +271,7 @@ class MapGen():
         self.molecules = [mol for charge in self.ligands.values()
                           for mol in charge["Mol"]]
 
+        # FIXME This blows up with single molecule SDF
         self.mcs = rdFMCS.FindMCS(self.molecules,
                                   matchValences=False,
                                   ringMatchesRingOnly=True,
