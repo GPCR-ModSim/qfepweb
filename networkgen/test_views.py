@@ -5,6 +5,7 @@ import json
 from django.template.response import TemplateResponse
 from django.test import Client, TestCase
 from django.urls import reverse
+from model_bakery import baker
 
 from networkgen.forms import GeneratorForm
 from networkgen.models import Generator as g, Ligand
@@ -18,16 +19,21 @@ class NetworkGen(TestCase):
 
     """
     def setUp(self):
-        pass
+        self.network = baker.make_recipe("networkgen.network")
+        self.ligands = baker.make("Ligand",
+                                  network=self.network,
+                                  _quantity=5)
 
     def test_the_home_is_available(self):
-        page = self.client.get(reverse('networkgen:index'))
+        page = self.client.get(reverse('networkgen:create'))
 
         assert page.status_code == 200
         assert "FEP Network" in page.content.decode()  # The title
 
     def test_the_javascript_and_css_is_included(self):
-        page = self.client.get(reverse('networkgen:index')).content.decode()
+        page = self.client.get(
+            reverse('networkgen:detail', kwargs={"pk": self.network.pk})
+        ).content.decode()
 
         # There are proxies to identify the static assets needed
         requiredJs = ["lodash.min.js", "vis.js", "networkgen.js"]
@@ -35,13 +41,15 @@ class NetworkGen(TestCase):
                        "networkgen.css"]
 
         for asset in requiredJs + requiredCss:
-         assert asset in page
+            assert asset in page
 
     def test_network_edit_buttons_are_visible(self):
         expected_buttons = ["btn-undo", "btn-redo", "saveButton",
                             "cancelButton"]
 
-        page = self.client.get(reverse('networkgen:index')).content.decode()
+        page = self.client.get(
+            reverse('networkgen:detail', kwargs={"pk": self.network.pk})
+        ).content.decode()
 
         for btn in expected_buttons:
             assert btn in page

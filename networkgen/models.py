@@ -1,9 +1,9 @@
 import json
+import logging
 from os import name
 from pathlib import Path
 import uuid
 from django.conf import settings
-#from django.core.files import File
 from django.db import models
 from django.urls import reverse
 from django_extensions.db.models import TimeStampedModel
@@ -11,6 +11,8 @@ from rdkit import Chem
 
 from networkgen import mapgen
 
+
+logger = logging.getLogger(__name__)
 
 class Generator(TimeStampedModel):
     """A model that holds parameters for the FEP network generator."""
@@ -88,8 +90,12 @@ class Generator(TimeStampedModel):
                 smiles=Chem.MolToSmiles(molecule, isomericSmiles=True),
                 network=self)
             ligand.image = str(Path(img_dir) / f"{ligand.uuid}.png")
-            with open(ligand.image.path, "wb") as png:
-                png.write(moleculeImage.png())
+            try:
+                # Better to not write the Ligand image than to panic
+                with open(ligand.image.path, "wb") as png:
+                    png.write(moleculeImage.png())
+            except:
+                logger.error(f"Couldn't create image for ligand {ligand}")
             ligands.append(ligand)
 
         db_ligands = Ligand.objects.bulk_create(ligands)
