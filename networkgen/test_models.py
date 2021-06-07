@@ -20,9 +20,9 @@ class GeneratorModel(TestCase):
 
     def tearDown(self):
         for l in Ligand.objects.all():
-            Path(l.image.path).unlink()
+            Path(l.image.path).unlink(missing_ok=True)
         for g in Generator.objects.all():
-            Path(g.in_sdf.path).unlink()
+                Path(g.in_sdf.path).unlink(missing_ok=True)
         try:
             Path(settings.MEDIA_ROOT / "molimages").rmdir()
             Path(settings.MEDIA_ROOT).rmdir()
