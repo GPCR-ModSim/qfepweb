@@ -166,16 +166,16 @@ function savegraph(){
 // Get out JSON data.
 var network = null;
 
-var json_data = null;
-$.ajax({
-    'async': false,
-    'global': false,
-    'url': "data/graph.json",
-    'dataType': "json",
-    'success': function (data) {
-        json_data = data;
-    }
-});
+//var json_data = null;
+//$.ajax({
+//    'async': false,
+//    'global': false,
+//    'url': "data/graph.json",
+//    'dataType': "json",
+//    'success': function (data) {
+//        json_data = data;
+//    }
+//});
 
 var nodes = new vis.DataSet(json_data.nodes);
 var edges = new vis.DataSet(json_data.edges);

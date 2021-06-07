@@ -41,7 +41,7 @@ class GeneratorModel(TestCase):
 
         assert list(network_json.keys()) == ["nodes", "edges"]
 
-        ligands = [(_.name, _.uuid, _.image.path) for _ in g.ligand_set.all()]
+        ligands = [(_.name, _.uuid, _.image.url) for _ in g.ligand_set.all()]
         for node in network_json["nodes"]:
             assert (node["label"], UUID(node["id"]), node["image"]) in ligands
 

@@ -56,7 +56,7 @@ class Generator(TimeStampedModel):
             node_ligand = key_ligands.get(node)
             result["nodes"].append(
                 {"label": node_ligand.name,
-                 "image": node_ligand.image.path,
+                 "image": node_ligand.image.url,
                  "id": str(node_ligand.uuid)})
 
         return json.dumps(result)
@@ -95,12 +95,15 @@ class Generator(TimeStampedModel):
         db_ligands = Ligand.objects.bulk_create(ligands)
 
         self.network = self._build_json(m.ligands, db_ligands)
+        self.save()
 
     def save(self, *args, **kwargs):
+        result = super().save(*args, **kwargs)
         if not self.network:
             # Do this only the first time is saved
             self.build_network()
-        super().save(*args, **kwargs)
+
+        return result
 
     def get_absolute_url(self):
         """ Get absolute url. """
