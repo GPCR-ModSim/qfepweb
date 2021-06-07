@@ -346,11 +346,24 @@ function redo(){
   }
 };
 
+function shake(evt){
+  network.setOptions(
+    {physics:
+      {enabled: !network.physics.physicsEnabled,
+       timestep: 0.5}});
+  if (network.physics.physicsEnabled) {
+    evt.target.innerText = "Physics Off";
+  }else{
+    evt.target.innerText = "Physics On";
+  }
+}
+
 $(document).ready(function() {
               // apply css
   css_for_manipulation();
   $("#save-sele").on("click", saveselection);
   $("#btn-undo").on("click", undo);
   $("#btn-redo").on("click", redo);
-  $("#extract-positions").on("click", savegraph)
+  $("#extract-positions").on("click", savegraph);
+  $("#shake-up").on("click", shake);
 });
