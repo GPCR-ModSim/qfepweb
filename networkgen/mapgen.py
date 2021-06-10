@@ -237,10 +237,16 @@ class MoleculeImage:
 
 
 class MapGen():
-    def __init__(self, in_sdf, network_obj=None):
-        if hasattr(in_sdf, "seek"):
-            in_sdf.seek(0)
-            self.suppl = Chem.ForwardSDMolSupplier(in_sdf)
+    def __init__(self, network_obj=None, in_sdf=""):
+        """Creates a Network from a Network Generator object.
+
+        A Network Generator is a model, in which we need one field: metric
+
+        If this model doesn't have a File-like at in_sdf, an alternative
+        in_sdf parameter can be provided to work with."""
+        if hasattr(network_obj.in_sdf, "seek"):
+            network_obj.in_sdf.seek(0)
+            self.suppl = Chem.ForwardSDMolSupplier(network_obj.in_sdf)
         else:
             self.suppl = Chem.SDMolSupplier(str(in_sdf))
 
@@ -292,6 +298,7 @@ class MapGen():
         """Return a similarity score between lig_i and lig_j using self.simF."""
         if lig_i == lig_j:
             return 100.0 if self.metric in [self.network.SMILES, self.network.MCS] else 1.0
+
         if self.metric in [self.network.Tanimoto, self.network.MFP]:
             return self.simF(data['FP'][lig_i], data['FP'][lig_j])
         if self.metric == self.network.MCS:
@@ -426,6 +433,7 @@ class MapGen():
 
 # The following code is the CLI
 def getParser():
+    # FIXME This is broken cause models.py cannot be imported (circular)
     parser = argparse.ArgumentParser(
         prog='MapGen',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -443,12 +451,13 @@ def getParser():
     return parser
 
 def main():
+    # FIXME This is broken cause models.py cannot be imported (circular)
     args = getParser().parse_args()
     ## Put file in memory stream. This allows the server to read uploaded file
     ##  into memory and pass it as an io.BytesIO() to MapGen
     with open(args.isdf, "rb") as f:
         with io.BytesIO(f.read()) as fio:
-            mg = MapGen(fio, args.metric)
+            mg = MapGen(args.metric)
             mg.process_map()
 
 if __name__ == "__main__":

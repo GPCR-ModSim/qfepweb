@@ -24,7 +24,7 @@ class MapGenerator(TestCase):
         self.genObj = baker.make_recipe("networkgen.network")
 
     def test_mapgen_can_be_inited_with_io_stream(self):
-        m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
+        m = mapgen.MapGen(network_obj=self.genObj)
 
         assert m.metric == self.genObj.MFP
 
@@ -36,7 +36,8 @@ class MapGenerator(TestCase):
 
     def test_mapgen_setup_of_ligands(self):
         """After MapGen loads the SDF data, the ligand setup must be called."""
-        m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
+        #m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
+        m = mapgen.MapGen(network_obj=self.genObj)
 
         assert list(m.ligands.keys()) == [0]
         assert list(m.ligands[0].keys()) == ["Name", "Mol", "FP", "df"]
@@ -44,7 +45,7 @@ class MapGenerator(TestCase):
 
     def test_set_the_similarity_function(self):
         self.genObj.metric = self.genObj.MCS
-        m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
+        m = mapgen.MapGen(network_obj=self.genObj)
 
         m._set_similarity_function()
         assert m.simF.__name__ == "FindMCS"
@@ -65,7 +66,7 @@ class MapGenerator(TestCase):
         and the whole web is doomed with bad input.
         """
         ## MFP
-        m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
+        m = mapgen.MapGen(network_obj=self.genObj)
 
         matrix = m.ligands[0]["df"]
         assert matrix.shape == (16, 16)  # A matrix lig x lig
@@ -79,9 +80,8 @@ class MapGenerator(TestCase):
 
     def test_simmilarity_matrix_tanimoto(self):
         # Tanimoto
-        self.sdfIo.seek(0)
         self.genObj.metric = self.genObj.Tanimoto
-        m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
+        m = mapgen.MapGen(network_obj=self.genObj)
 
         matrix = m.ligands[0]["df"]
         assert matrix.shape == (16, 16)
@@ -97,9 +97,8 @@ class MapGenerator(TestCase):
         """This test is like the above "test_simmilarity_matrix" but it takes
         forever."""
         # Smiles
-        self.sdfIo.seek(0)
         self.genObj.metric = self.genObj.SMILES
-        m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
+        m = mapgen.MapGen(network_obj=self.genObj)
 
         matrix = m.ligands[0]["df"]
         assert matrix.shape == (16, 16)
@@ -117,9 +116,8 @@ class MapGenerator(TestCase):
         """This test is like the above "test_simmilarity_matrix" but it takes
         forever."""
         # MCS
-        self.sdfIo.seek(0)
         self.genObj.metric = self.genObj.MCS
-        m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
+        m = mapgen.MapGen(network_obj=self.genObj)
 
         matrix = m.ligands[0]["df"]
         assert matrix.shape == (16, 16)
@@ -134,8 +132,7 @@ class MapGenerator(TestCase):
         assert matrix.loc["1h1q", "17"] == 51.0
 
     def test_mcs_calculation(self):
-        self.sdfIo.seek(0)
-        m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
+        m = mapgen.MapGen(network_obj=self.genObj)
 
         assert m.mcs.smartsString == "[#6&R]1(:&@[#7&R]:&@[#6&R](-&!@[#8&!R]" +\
             "-&!@[#6&!R]-&!@[#6&R]2-&@[#6&R]-&@[#6&R]-&@[#6&R]-&@[#6&R]-" +\
@@ -146,14 +143,32 @@ class MapGenerator(TestCase):
     def test_network_loading(self):
         """The network should be loaded at the beginning, because when the
         self.suppl gets consumed it becomes a pain to workwith."""
-        self.sdfIo.seek(0)
-        m = mapgen.MapGen(in_sdf=self.sdfIo, network_obj=self.genObj)
+        m = mapgen.MapGen(network_obj=self.genObj)
 
         assert len(m.molecules) == 16
         assert m.molecules[0].GetProp("_Name") == "30"
         assert [_.GetProp("_Name") for _ in m.molecules] == [
             '30', '28', '1oiy', '1oi9', '32', '1oiu', '29', '1h1r', '21', '26',
             '1h1s', '31', '20', '22', '17', '1h1q']
+
+    def test_work_with_raw_objects_no_db(self):
+        self.sdfIo.seek(0)
+        class DummyNetwork:
+            MCS = self.genObj.MCS
+            Tanimoto = self.genObj.Tanimoto
+            MFP = self.genObj.MFP
+            SMILES = self.genObj.SMILES
+
+            in_sdf = self.sdfIo
+            metric = self.genObj.SMILES
+
+        obj = DummyNetwork()
+
+        m = mapgen.MapGen(network_obj=obj)
+
+        assert m.metric == obj.SMILES
+
+        assert m.ligands[0]["df"].shape == (16, 16)
 
 
 class ImageGenerator(TestCase):

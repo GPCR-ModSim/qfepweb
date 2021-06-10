@@ -10,6 +10,7 @@ from django_extensions.db.models import TimeStampedModel
 from rdkit import Chem
 
 from networkgen import mapgen
+from networkgen import validators as v
 
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ class Generator(TimeStampedModel):
     SMILES = "SMILES"
     MFP = "MFP"
     Tanimoto = "Tanimoto"
-    MCS = "MCS"
+    MCS = "MCS"  # The slowest of them all
     METRICS_CHOICES = (
         (SMILES, "SMILES"),
         (MFP, "Morgan fingerprints (MFP)"),
@@ -31,7 +32,8 @@ class Generator(TimeStampedModel):
         primary_key=True, default=uuid.uuid4, editable=False)
     metric = models.CharField(
         max_length=155, choices=METRICS_CHOICES, default=MFP)
-    in_sdf = models.FileField(max_length=255, null=True, help_text='max. 20 Mbs')
+    in_sdf = models.FileField(max_length=255, null=True, help_text='max. 20 Mbs',
+                              validators=[v.two_ligands])
     network = models.JSONField(null=True)
 
     def __str__(self):
@@ -70,7 +72,7 @@ class Generator(TimeStampedModel):
             - Build the images for the Ligands
             - Save those Ligands.
         """
-        m = mapgen.MapGen(in_sdf=self.in_sdf, network_obj=self)
+        m = mapgen.MapGen(network_obj=self)
         m.make_map()
 
         if len(m.molecules) < 2:
