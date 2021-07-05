@@ -1,15 +1,19 @@
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import (ButtonHolder, Div, Fieldset, Layout, Submit,
                                  Reset)
+from django import forms
 from django.forms import ModelForm
 from networkgen.models import Generator
-from django import forms
+from networkgen import validators as v
 
 
 class GeneratorForm(ModelForm):
     """A base form for the FEP network generator model."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # TODO: The following line allows the uploading of multiple files,
+        #       but some work in the backend is needed before it's possible
+        #self.fields["in_sdf"].widget.attrs.update({"multiple": True})
         self.helper = FormHelper()
         self.helper.form_action = ''
         self.helper.layout = Layout(

@@ -1,14 +1,16 @@
 from pathlib import Path
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from networkgen import forms
 from networkgen.models import Generator as g
+from networkgen import validators as v
 
 
 class GeneratorForm(TestCase):
     """Test the Generator Input Form"""
     def setUp(self):
-        in_sdf = Path(__file__).parent / "test_data" / "One_ligand.sdf"
+        in_sdf = Path(__file__).parent / "test_files" / "Two_Ligands.sdf"
         with open(in_sdf, "rb") as inFile:
             content = inFile.read()
 
@@ -43,5 +45,27 @@ class GeneratorForm(TestCase):
 
         assert form.is_valid(), form.errors
 
+    def test_one_file_validator(self):
+        in_sdf = Path(__file__).parent / "test_files" / "One_ligand.sdf"
+        with open(in_sdf, "rb") as inFile:
+            content = inFile.read()
+        sdf = SimpleUploadedFile(in_sdf, content)
+
+        with self.assertRaisesMessage(
+            ValidationError, "SDF with only one ligand. Needs two at least"):
+            v.two_ligands(sdf)
+
     def test_some_invalid_sdfs(self):
-        self.fail("Continue testing here")
+        in_sdf = Path(__file__).parent / "test_files" / "One_ligand.sdf"
+        with open(in_sdf, "rb") as inFile:
+            content = inFile.read()
+
+        self.multipart = {"in_sdf": SimpleUploadedFile(in_sdf, content)}
+        self.form_data = {"metric": g.SMILES}
+
+        form = forms.GeneratorForm(data=self.form_data,
+                                   files=self.multipart)
+        assert not form.is_valid()
+
+        assert form.errors.as_data()["in_sdf"][0].message == \
+            "SDF with only one ligand. Needs two at least"
