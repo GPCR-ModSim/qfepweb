@@ -1,0 +1,18 @@
+{% load static %}
+<script type="text/javascript" src="{% static 'js/molstar.js' %}"></script>
+
+<script type="text/javascript">
+ var viewer = new molstar.Viewer('molview', {
+  layoutIsExpanded: false,
+  layoutShowControls: false,
+  layoutShowRemoteState: false,
+  layoutShowSequence: true,
+  layoutShowLog: false,
+  layoutShowLeftPanel: true,
+
+  viewportShowExpand: true,
+  viewportShowSelectionMode: false,
+  viewportShowAnimation: false,
+ });
+ viewer.loadStructureFromUrl('{{object.in_pdb.url }}', format='pdb');
+</script>

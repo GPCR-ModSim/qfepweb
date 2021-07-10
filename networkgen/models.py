@@ -34,6 +34,7 @@ class Generator(TimeStampedModel):
         max_length=155, choices=METRICS_CHOICES, default=MFP)
     in_sdf = models.FileField(max_length=255, null=True, help_text='max. 20 Mbs',
                               validators=[v.two_ligands])
+    in_pdb = models.FileField(max_length=255, null=True, blank=True)  # TODO: Validators
     network = models.JSONField(null=True)
 
     def __str__(self):

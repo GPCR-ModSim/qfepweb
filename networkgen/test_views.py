@@ -91,3 +91,25 @@ class NetworkGeneratorViews(TestCase):
         # The page rendered contains the Json for the network. This is a proxy
         #  of the network view page.
         assert obj.network in response.content.decode()
+
+    def test_pdb_file_submission(self):
+        assert Ligand.objects.count() == 0
+        with open(Path(__file__).parent
+                  / "test_files" / "CDK2_ligands.sdf", "rb") as f:
+            sdf = BytesIO(f.read())
+
+        with open(Path(__file__).parent
+                  / "test_files" / "cdk8.pdb", "rb") as f:
+            pdb = BytesIO(f.read())
+
+        response = self.c.post(reverse("networkgen:create"),
+                               {"in_sdf": sdf, "metric": g.MCS, "in_pdb": pdb},
+                               follow=True)
+        assert response.status_code == 200
+
+        obj = response.context.get("object")
+
+        # Expect the structure is loaded in the response.
+        expected = f"viewer.loadStructureFromUrl('{obj.in_pdb.url}', format='pdb')"
+
+        assert expected in response.content.decode()

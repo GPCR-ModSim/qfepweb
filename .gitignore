@@ -14,5 +14,5 @@ lib
 pyvenv.cfg
 db.sqlite3
 
-media/
-static/
+/media/
+/static/

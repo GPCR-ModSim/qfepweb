@@ -17,6 +17,10 @@
  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis-network.min.css" />
  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" />
  <link rel="stylesheet" href="{% static 'css/networkgen.css' %}">
+ {% if object.in_pdb %}
+  <link rel="stylesheet" href="{% static 'css/molstar.css' %}">
+  <link rel="stylesheet" href="{% static 'css/molstar_window.css' %}">
+ {% endif %}
 {% endblock %}
 
 {% block javascript %}
@@ -44,7 +48,15 @@
   <button id="extract-positions" type="button" class="btn btn-light">Finish
   </button>
  </div>
- <div id="mynetwork"></div>
+ <div class="container">
+  <div class="row">
+   <div id="mynetwork" class="col-8 px-2"></div>
+   {% if object.in_pdb %}
+    <div id="molview" class="col-4 px-2"></div>
+    {% include "networkgen/molstar.html" %}
+   {% endif %}
+  </div>
+ </div>
  <script>
   window.onload=draw();
  </script>

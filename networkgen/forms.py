@@ -21,6 +21,7 @@ class GeneratorForm(ModelForm):
                 "Create a network from a Sdf file",
                 Div(
                     Div("in_sdf", css_class="col-sm-12"),
+                    Div("in_pdb", css_class="col-sm-12"),
                     Div("metric", css_class="col-sm-12"),
                     css_class="row")),
             ButtonHolder(
@@ -30,9 +31,10 @@ class GeneratorForm(ModelForm):
     class Meta:
         """Set the basic config for the FEP network form."""
         model = Generator
-        fields = ["metric", "in_sdf"]
+        fields = ["in_pdb", "in_sdf", "metric"]
         help_texts = {
             "metric": "Distance metric to compare chemical similarity " +\
                 "between ligand pairs.",
-            "in_sdf": "Input .sdf file containing ligands."
+            "in_sdf": "Input .sdf file containing ligands.",
+            "in_pdb": "Input [optional] .pdb file containing proteins."
         }

@@ -11,11 +11,15 @@ class GeneratorForm(TestCase):
     """Test the Generator Input Form"""
     def setUp(self):
         in_sdf = Path(__file__).parent / "test_files" / "Two_Ligands.sdf"
+        in_pdb = Path(__file__).parent / "test_files" / "cdk8.pdb"
         with open(in_sdf, "rb") as inFile:
             content = inFile.read()
+        with open(in_pdb, "rb") as inFile:
+            pdb_content = inFile.read()
 
         self.multipart = {"in_sdf": SimpleUploadedFile(in_sdf, content)}
-        self.form_data = {"metric": g.SMILES}
+        self.form_data = {"metric": g.SMILES,
+                          "in_pdb": SimpleUploadedFile(in_pdb, pdb_content)}
 
     def test_form_is_a_model_form(self):
         form = forms.GeneratorForm()
@@ -30,6 +34,7 @@ class GeneratorForm(TestCase):
         assert "Distance metric to compare chemical similarity between " +\
             "ligand pairs." in renderedForm
         assert "Input .sdf file containing ligands." in renderedForm
+        assert "Input [optional] .pdb file containing proteins." in renderedForm
 
     def test_form_rendering(self):
         form = forms.GeneratorForm()
@@ -37,6 +42,8 @@ class GeneratorForm(TestCase):
 
         assert '<label for="id_in_sdf">In sdf:</label>' in renderedForm
         assert '<input type="file" name="in_sdf" required id="id_in_sdf">' in \
+            renderedForm
+        assert '<input type="file" name="in_pdb" id="id_in_pdb">' in \
             renderedForm
 
     def test_minimal_valid_form(self):
