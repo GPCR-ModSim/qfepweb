@@ -33,7 +33,7 @@ class Generator(TimeStampedModel):
     metric = models.CharField(
         max_length=155, choices=METRICS_CHOICES, default=MFP)
     in_sdf = models.FileField(max_length=255, null=True, help_text='max. 20 Mbs',
-                              validators=[v.two_ligands])
+                              validators=[v.valid_sdf])
     network = models.JSONField(null=True)
 
     def __str__(self):
