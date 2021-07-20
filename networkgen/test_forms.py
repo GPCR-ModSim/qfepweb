@@ -52,8 +52,8 @@ class GeneratorForm(TestCase):
         sdf = SimpleUploadedFile(in_sdf, content)
 
         with self.assertRaisesMessage(
-            ValidationError, "SDF with only one ligand. Needs two at least"):
-            v.two_ligands(sdf)
+            ValidationError, "SDF file contains a single ligand. Needs two at least."):
+            v.valid_sdf(sdf)
 
     def test_some_invalid_sdfs(self):
         in_sdf = Path(__file__).parent / "test_files" / "One_ligand.sdf"
@@ -68,4 +68,25 @@ class GeneratorForm(TestCase):
         assert not form.is_valid()
 
         assert form.errors.as_data()["in_sdf"][0].message == \
-            "SDF with only one ligand. Needs two at least"
+            "SDF file contains a single ligand. Needs two at least."
+
+    def test_empty_file_validator(self):
+        in_sdf = Path(__file__).parent / "test_files" / "Empty_ligand.sdf"
+        with open(in_sdf, "rb") as inFile:
+            content = inFile.read()
+        sdf = SimpleUploadedFile(in_sdf, content)
+
+        with self.assertRaisesMessage(
+            ValidationError, "SDF file contains no ligands. Needs two at least."):
+            v.valid_sdf(sdf)
+
+    def test_invalid_sdf(self):
+        in_sdf = Path(__file__).parent / "test_files" / "Invalid.sdf"
+        with open(in_sdf, "rb") as inFile:
+            content = inFile.read()
+        sdf = SimpleUploadedFile(in_sdf, content)
+
+        with self.assertRaisesMessage(
+            ValidationError,
+            "RDKit is unable to read molecule with index 0 in the input SDF file."):
+            v.valid_sdf(sdf)
