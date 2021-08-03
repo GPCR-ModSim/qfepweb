@@ -3,5 +3,6 @@
 django-debug-toolbar==3.2.1
 model-bakery==1.2.1
 pytest-django==4.1.0
+pytest-timeout==1.4.2
 pytest-xdist==2.2.1
 vulture==2.3
