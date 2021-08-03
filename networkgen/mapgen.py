@@ -244,7 +244,8 @@ class MapGen():
 
         If this model doesn't have a File-like at in_sdf, an alternative
         in_sdf parameter can be provided to work with."""
-        if hasattr(network_obj.in_sdf, "seek"):
+        if network_obj and hasattr(network_obj, "in_sdf") and \
+                hasattr(network_obj.in_sdf, "seek"):
             network_obj.in_sdf.seek(0)
             self.suppl = Chem.ForwardSDMolSupplier(network_obj.in_sdf)
         else:
@@ -380,8 +381,11 @@ class MapGen():
             H = nx.Graph()
             lpd = self.ligands[charge]['pairs_dict']
             simdf = self.ligands[charge]['df']
-            if len(lig['Name']) == 1:  # In case one ligand is found alone in a charge group
-                ligcol = simdf[lig['Name']].sort_values(by=[lig['Name'][0]]) #complete similarity matrix
+
+            if len(lig['Name']) == 1:
+                # In case one ligand is found alone in a charge group
+                # Complete similarity matrix
+                ligcol = simdf[lig['Name']].sort_values(by=[lig['Name'][0]])
                 H.add_edge(lig['Name'][0], ligcol.index[1])
                 H.add_edge(lig['Name'][0], ligcol.index[2])
                 lig['Graph'] = H
@@ -397,11 +401,20 @@ class MapGen():
                     l1, l2 = pert.split()[0], pert.split()[1]
                     if H.has_edge(l1, l2) or H.has_edge(l2, l1):
                         continue
-                    if len(H.nodes) == 0 or self.intersection(H.edges, pert) and self.not_ingraph(H.nodes, pert):
+                    if len(H.nodes) == 0 or self.intersection(H.edges, pert) \
+                            and self.not_ingraph(H.nodes, pert):
                         H.add_edge(l1, l2, weight=score)
                         break
 
             # 2. Close Cycles
+            # #941755240 When there are outer nodes that are already linked,
+            # the method gets trapped here:
+            #  - [Node A, Node B]
+            #  - Outer nodes are [A, B], no edges
+            #  - A add edge to B
+            #  - Next loop edge (l1, l2) is added to H, outer nodes still 2!
+            #  The graph is not directed, so Edge(l1, l2) == Edge(l2, l1), thus
+            #  skipping the final check before H.add_edge
             while len(self.outer_nodes(H)) != 0:
                 for pert, score in lpd.items():
                     l1, l2 = pert.split()[0], pert.split()[1]
