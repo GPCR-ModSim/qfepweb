@@ -390,6 +390,15 @@ class MapGen():
                 H.add_edge(lig['Name'][0], ligcol.index[2])
                 lig['Graph'] = H
                 break
+            elif len(lig['Name']) == 2:
+                # In case two ligands are found in a charge group
+                # Complete similarity matrix. At this point, stop graph
+                # generation because two nodes in a graph will always result
+                # in the same graph.
+                ligcol = simdf[lig['Name']].sort_values(by=[lig['Name'][0]])
+                H.add_edge(lig['Name'][0], lig['Name'][1])
+                lig['Graph'] = H
+                break
 
             # 1. Make SPT
             incomplete = True
@@ -406,22 +415,24 @@ class MapGen():
                         H.add_edge(l1, l2, weight=score)
                         break
 
-            # 2. Close Cycles
-            # #941755240 When there are outer nodes that are already linked,
-            # the method gets trapped here:
-            #  - [Node A, Node B]
-            #  - Outer nodes are [A, B], no edges
-            #  - A add edge to B
-            #  - Next loop edge (l1, l2) is added to H, outer nodes still 2!
-            #  The graph is not directed, so Edge(l1, l2) == Edge(l2, l1), thus
-            #  skipping the final check before H.add_edge
+            # 2. Close Cycles        
             while len(self.outer_nodes(H)) != 0:
+                added_edge = False
                 for pert, score in lpd.items():
                     l1, l2 = pert.split()[0], pert.split()[1]
+
                     if l1 in self.outer_nodes(H) or l2 in self.outer_nodes(H):
                         if (l1, l2) not in H.edges or (l2, l1) not in H.edges:
                             H.add_edge(l1, l2, weight=score)
+
+                            # signal that an edge has been added in this iteration
+                            # of the while loop.
+                            added_edge = True
                             break
+
+                # if no edge has been added, the while loop will hang. Exit.
+                if not added_edge:
+                    break
 
             # 3. Add influence edges
             eig_cent = nx.eigenvector_centrality(H, max_iter=1000)
