@@ -120,7 +120,8 @@ function bs_alert(message, level){
 
 function saveselection(){
 
-  const selNodes = network.getSelectedNodes()
+  const selNodes = data.nodes.get(network.getSelectedNodes());
+  let labels = selNodes.map(n => n.label);
 
   if (selNodes.length == 0){
     // catch cases where user has not selected nodes.
@@ -130,7 +131,7 @@ function saveselection(){
   do{
     // prompt with string field
     var groupName = prompt("Enter an identifier for this group, then press OK. Press Cancel\n\
-if you do not want to make a group with molecule(s):\n"+selNodes+".");
+if you do not want to make a group with molecule(s):\n" + labels + ".");
 } while(groupName !== null && groupName === "") // the while statement makes the prompt reappear
 // when no string is input.
 
