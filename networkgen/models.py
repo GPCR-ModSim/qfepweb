@@ -83,8 +83,9 @@ class Generator(TimeStampedModel):
         Path(settings.MEDIA_ROOT / "molimages").mkdir(exist_ok=True)
 
         ligands = []
-        for molecule in m.molecules:
-            moleculeImage = mapgen.MoleculeImage(molecule=molecule, core=m.mcs)
+        pool = mapgen.MoleculePool(m.molecules)
+        for i, molecule in enumerate(m.molecules):
+            moleculeImage = mapgen.MoleculeImage(pool_idx=i, pool=pool)
             ligand = Ligand(
                 charge=Chem.rdmolops.GetFormalCharge(molecule),
                 atom_number=len(molecule.GetAtoms()),

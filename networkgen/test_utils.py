@@ -179,15 +179,11 @@ class ImageGenerator(TestCase):
             mol_data = io.BytesIO(m.read())
 
         self.molecules = list(Chem.ForwardSDMolSupplier(mol_data))
-        self.core = Chem.rdFMCS.FindMCS(self.molecules,
-                                        matchValences=False,
-                                        ringMatchesRingOnly=True,
-                                        completeRingsOnly=True,
-                                        matchChiralTag=False)
+        self.pool = mapgen.MoleculePool(self.molecules)
 
     def test_color_palette(self):
         ## This is the default palette, precalculated
-        imgr = mapgen.MoleculeImage(self.molecules[0])
+        imgr = mapgen.MoleculeImage(pool_idx=0, pool=self.pool)
         assert imgr.palette == [
             (0, 0, 0),
             (0.9019607843137255, 0.6235294117647059, 0.0),
@@ -198,7 +194,8 @@ class ImageGenerator(TestCase):
             (0.8352941176470589, 0.3686274509803922, 0.0),
             (0.8, 0.4745098039215686, 0.6549019607843137)]
 
-        imgr = mapgen.MoleculeImage(self.molecules[0], palette="IBM")
+        imgr = mapgen.MoleculeImage(pool_idx=0, pool=self.pool,
+                                    palette="IBM")
         assert imgr.palette == [
             (0, 0, 0),
             (0.39215686274509803, 0.5607843137254902, 1.0),
@@ -208,41 +205,36 @@ class ImageGenerator(TestCase):
             (1.0, 0.6901960784313725, 0.0)]
 
     def test_needed_properties_for_image_generation(self):
-        imgr = mapgen.MoleculeImage(molecule=self.molecules[0],
-                                    core=self.core)
+        imgr = mapgen.MoleculeImage(pool_idx=0,
+                                    pool=self.pool)
 
         assert imgr.name == "30"
 
         assert isinstance(imgr.core, Chem.rdchem.Mol)
 
     def test_molecules_are_flatten(self):
-        imgr = mapgen.MoleculeImage(molecule=self.molecules[0],
-                                    core=self.core)
+        imgr = mapgen.MoleculeImage(pool_idx=0,
+                                    pool=self.pool)
         assert imgr._flatten_molecule() == None
 
     def test_substructure_core_finder(self):
         """We have to find the MCS (core) structure in our molecule."""
-        imgr = mapgen.MoleculeImage(molecule=self.molecules[0],
-                                    core=self.core)
-
-        with self.assertRaises(KeyError):
-            # The key as not been set yet
-            [_.GetProp("SourceAtomIdx") for _ in imgr.molecule.GetAtoms()]
-
-        assert imgr._find_core() == None
+        imgr = mapgen.MoleculeImage(pool_idx=0,
+                                    pool=self.pool)
 
         assert [_.GetProp("SourceAtomIdx") for _ in imgr.molecule.GetAtoms()]
 
     def test_png_from_smiles_single_molecule(self):
         molecule = Chem.MolFromSmiles('Cc1nc(C)c(s1)c2ccnc(Nc3ccccc3F)n2')
-        imgr = mapgen.MoleculeImage(molecule=molecule)
+        pool = mapgen.MoleculePool([molecule])
+        imgr = mapgen.MoleculeImage(pool_idx=0, pool=pool)
 
         with open(self.test_files / "Plain.png", "rb") as r:
             assert imgr.png() == r.read()
 
     def test_png_generation(self):
-        imgr = mapgen.MoleculeImage(molecule=self.molecules[0],
-                                    core=self.core)
+        imgr = mapgen.MoleculeImage(pool_idx=0,
+                                    pool=self.pool)
 
         with open(self.test_files / "Sample30.png", "rb") as r:
             assert imgr.png() == r.read()
@@ -250,20 +242,37 @@ class ImageGenerator(TestCase):
     def test_png_from_smiles(self):
         mol1 = Chem.MolFromSmiles('Cc1nc(C)c(s1)c2ccnc(Nc3ccccc3F)n2')
         mol2 = Chem.MolFromSmiles('Cc1nc(Nc5ccccc5)c(s1)c2ccnc(Nc3ccccc3F)n2')
+        pool = mapgen.MoleculePool([mol1, mol2])
 
-        core = Chem.rdFMCS.FindMCS([mol1, mol2],
-                                   matchValences=False,
-                                   ringMatchesRingOnly=True,
-                                   completeRingsOnly=True,
-                                   matchChiralTag=False)
-
-        imgr = mapgen.MoleculeImage(molecule=mol2, core=core)
+        imgr = mapgen.MoleculeImage(pool_idx=1, pool=pool)
         imgr.name = "Sample"
         with open(self.test_files / "HollowRing.png", "rb") as r:
             assert imgr.png() == r.read()
 
-        imgr = mapgen.MoleculeImage(molecule=mol2, core=core)
+        imgr = mapgen.MoleculeImage(pool_idx=1, pool=pool)
         imgr.fill_rings = True
         imgr.name = "Sample2"
         with open(self.test_files / "FilledRing.png", "rb") as r:
             assert imgr.png() == r.read()
+
+class PoolGenerator(TestCase):
+    def setUp(self):
+        self.test_files = Path(__file__).parent / "test_files"
+        with open(self.test_files / "CDK2_ligands.sdf", "rb") as m:
+            mol_data = io.BytesIO(m.read())
+
+        self.molecules = list(Chem.ForwardSDMolSupplier(mol_data))
+
+    def test_the_cores_can_be_calculated(self):
+        pool = mapgen.MoleculePool(self.molecules)
+
+        assert isinstance(pool.mcs, Chem.rdFMCS.MCSResult)
+        assert isinstance(pool.core, Chem.rdchem.Mol)
+        assert isinstance(pool.query_core, Chem.rdchem.Mol)
+
+    def test_group_decomposition(self):
+        pool = mapgen.MoleculePool(self.molecules)
+
+        assert len(pool.groups) == 16
+        for molecule in pool.groups:
+            assert list(molecule.keys()) == ["Core", "R1", "R2"]

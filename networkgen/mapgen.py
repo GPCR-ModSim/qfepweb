@@ -1,5 +1,5 @@
 import argparse
-from functools import lru_cache
+from functools import cached_property, lru_cache
 import io
 
 import networkx as nx
@@ -32,22 +32,76 @@ def get_palette(name="OKABE"):
     return result
 
 
+class MoleculePool:
+    """Keeps track of a group of molecules, adding the properties needed.
+
+    mcs: The Maximum Common Substructure (the core).
+    core: The common core for all molecules as a Mol object.
+    query_core: Same as core, but to use with decomposition.
+    groups: A list of Core + Residues found for each molecule."""
+    def __init__(self, molecules):
+        self.molecules = molecules
+        self.groups  # Inits the core
+
+    def __getitem__(self, idx):
+        return self.molecules[idx]
+
+    @cached_property
+    def mcs(self):
+        if len(self.molecules) == 1:
+            # If the "pool" is only one, create a pool of two to cheat FindMCS.
+            # The MCS will be the whole molecule.
+            molecules = [self.molecules[0], self.molecules[0]]
+        else:
+            molecules = self.molecules
+
+        return rdFMCS.FindMCS(molecules,
+                              matchValences=False,
+                              ringMatchesRingOnly=True,
+                              completeRingsOnly=True,
+                              matchChiralTag=False)
+
+    @cached_property
+    def core(self):
+        return Chem.MolFromSmarts(self.mcs.smartsString)
+
+    @cached_property
+    def query_core(self):
+        ps = Chem.AdjustQueryParameters.NoAdjustments()
+        ps.makeDummiesQueries = True
+        return Chem.AdjustQueryProperties(self.core, ps)
+
+    @cached_property
+    def groups(self):
+        molecule_matches = []
+        for molecule in self.molecules:
+            if molecule.HasSubstructMatch(self.query_core):
+                molecule_matches.append(molecule)
+                for atom in molecule.GetAtoms():
+                    atom.SetIntProp("SourceAtomIdx", atom.GetIdx())
+
+        return Chem.rdRGroupDecomposition.RGroupDecompose(
+            [self.query_core], molecule_matches, asSmiles=False, asRows=True)[0]
+
+
 class MoleculeImage:
     """Creates and writes Images of molecules."""
     # Workflow mostly based on
     # https://rdkit.blogspot.com/2020/10/molecule-highlighting-and-r-group.html
-    def __init__(self, molecule, core=None, palette="OKABE"):
-        self.molecule = Chem.Mol(molecule)  # RDKit modifies the original
+    def __init__(self, pool_idx=0, pool=None, palette="OKABE"):
+        self.pool = pool  # This is the info of all other molecules
+        self.pool_idx = pool_idx
+        self.molecule = Chem.Mol(self.pool[self.pool_idx])  # RDKit modifies the original
         # Create a new molecule to store the drawing changes
         self.draw_mol = self.molecule
 
         self.palette = get_palette(name=palette)
         try:
-            self.name = molecule.GetProp("_Name")
+            self.name = self.molecule.GetProp("_Name")
         except KeyError:
             self.name = ""
 
-        self.core = core  # This is the part of the molecule common to others
+        self.core = Chem.Mol(self.pool.core)  # Copy the core
         self.size = (400, 400)
         self.fill_rings = False
         self.idx_property = "SourceAtomIdx"
@@ -69,20 +123,20 @@ class MoleculeImage:
             self.core = Chem.MolFromSmarts(self.core.smartsString)
             rdDepictor.Compute2DCoords(self.core)
 
-    def _find_core(self):
-        """Find the MCS (core) structure in our molecule and set up groups."""
-        #  then tag matching atom indices in each ligand.
-        ps = Chem.AdjustQueryParameters.NoAdjustments()
-        ps.makeDummiesQueries = True
-
-        qcore = Chem.AdjustQueryProperties(self.core, ps)
-        if self.molecule.HasSubstructMatch(qcore):
-            for atom in self.molecule.GetAtoms():
-                atom.SetIntProp("SourceAtomIdx", atom.GetIdx())
-
-        self.groups = rdRGroupDecomposition.RGroupDecompose(
-            [qcore], [self.molecule], asSmiles=False, asRows=True)[0][0]
-
+#    def _find_core(self):
+#        """Find the MCS (core) structure in our molecule and set up groups."""
+#        #  then tag matching atom indices in each ligand.
+#        ps = Chem.AdjustQueryParameters.NoAdjustments()
+#        ps.makeDummiesQueries = True
+#
+#        qcore = Chem.AdjustQueryProperties(self.core, ps)
+#        if self.molecule.HasSubstructMatch(qcore):
+#            for atom in self.molecule.GetAtoms():
+#                atom.SetIntProp("SourceAtomIdx", atom.GetIdx())
+#
+#        self.groups = rdRGroupDecomposition.RGroupDecompose(
+#            [qcore], [self.molecule], asSmiles=False, asRows=True)[0][0]
+#
     def _fix_isotopes(self):
         """Include the atom map numbers in the substructure search in order to
         try to ensure a good alignment of the molecule to symmetric cores."""
@@ -90,7 +144,7 @@ class MoleculeImage:
             atom.ExpandQuery(
                 rdqueries.IsotopeEqualsQueryAtom(200 + atom.GetAtomMapNum()))
 
-        for label, group in self.groups.items():
+        for label, group in self.pool.groups[self.pool_idx].items():
             if label == 'Core':
                 continue
             for atom in group.GetAtoms():
@@ -110,7 +164,6 @@ class MoleculeImage:
         """Remove unmapped hs so that they don't mess up the depiction.
 
         Updates the old indexes mapped to new ones"""
-
         rhps = Chem.RemoveHsParameters()
         rhps.removeMapped = False
         self.draw_mol = Chem.RemoveHs(self.molecule, rhps)
@@ -125,7 +178,8 @@ class MoleculeImage:
                 else:
                     atom.SetIsotope(0)
 
-        rdDepictor.GenerateDepictionMatching2DStructure(self.draw_mol, self.core)
+        #self.draw_mol = rdDepictor.GenerateDepictionMatching2DStructure(
+        #    self.draw_mol, self.core)
 
     def _add_ring(self, group, color):
         """Add rings found in group to self.rings."""
@@ -203,7 +257,7 @@ class MoleculeImage:
 
     def png(self):
         """Create a PNG with the data."""
-        # Store which atoms, bonds, and rings we'll be highlighted
+        # Store which atoms, bonds, and rings will be highlighted
         highlights = [{}, {}, {}, {}]
 
         # Initialize the drawing
@@ -212,15 +266,13 @@ class MoleculeImage:
         canvas_options.useBWAtomPalette()
 
         if self.core:
-            self._find_core()
             self._fix_isotopes()
             self._remove_hs()
-
             # Loop over R groups.
-            for color, (label, group) in zip(self.palette, self.groups.items()):
+            for color, (label, group) in zip(
+                    self.palette, self.pool.groups[self.pool_idx].items()):
                 if label == "Core":
                     continue
-
                 self._highlight_residue(group, color, highlights)
 
                 if self.fill_rings:
@@ -415,7 +467,7 @@ class MapGen():
                         H.add_edge(l1, l2, weight=score)
                         break
 
-            # 2. Close Cycles        
+            # 2. Close Cycles
             while len(self.outer_nodes(H)) != 0:
                 added_edge = False
                 for pert, score in lpd.items():
