@@ -39,9 +39,10 @@ class MoleculePool:
     core: The common core for all molecules as a Mol object.
     query_core: Same as core, but to use with decomposition.
     groups: A list of Core + Residues found for each molecule."""
+
     def __init__(self, molecules):
         self.molecules = molecules
-        self.groups  # Inits the core
+        self.groups  # By calling the property, it inits the core
 
     def __getitem__(self, idx):
         return self.molecules[idx]
@@ -89,6 +90,19 @@ class MoleculeImage:
     # Workflow mostly based on
     # https://rdkit.blogspot.com/2020/10/molecule-highlighting-and-r-group.html
     def __init__(self, pool_idx=0, pool=None, palette="OKABE"):
+        """Loads a molecule to create its image.
+
+        As each molecule needs a core to refer to (orienting, coloring...),
+        load a `pool` of them, pointing which one of the pool are you interested:
+
+            pool = MoleculePool([Mol1, Mol2, ..., Moln])
+
+            # Load Image for Mol1 above
+            MoleculeImage(pool=pool, pool_idx=0)
+            # For Mol2
+            MoleculeImage(pool=pool, pool_idx=1)
+
+        """
         self.pool = pool  # This is the info of all other molecules
         self.pool_idx = pool_idx
         self.molecule = Chem.Mol(self.pool[self.pool_idx])  # RDKit modifies the original
@@ -102,6 +116,7 @@ class MoleculeImage:
             self.name = ""
 
         self.core = Chem.Mol(self.pool.core)  # Copy the core
+        rdDepictor.Compute2DCoords(self.core) # This reorients the core
         self.size = (400, 400)
         self.fill_rings = False
         self.idx_property = "SourceAtomIdx"
@@ -119,24 +134,6 @@ class MoleculeImage:
         rdDepictor.Compute2DCoords(self.molecule)
         self.molecule.UpdatePropertyCache()
 
-        if self.core and hasattr(self.core, "smartsString"):
-            self.core = Chem.MolFromSmarts(self.core.smartsString)
-            rdDepictor.Compute2DCoords(self.core)
-
-#    def _find_core(self):
-#        """Find the MCS (core) structure in our molecule and set up groups."""
-#        #  then tag matching atom indices in each ligand.
-#        ps = Chem.AdjustQueryParameters.NoAdjustments()
-#        ps.makeDummiesQueries = True
-#
-#        qcore = Chem.AdjustQueryProperties(self.core, ps)
-#        if self.molecule.HasSubstructMatch(qcore):
-#            for atom in self.molecule.GetAtoms():
-#                atom.SetIntProp("SourceAtomIdx", atom.GetIdx())
-#
-#        self.groups = rdRGroupDecomposition.RGroupDecompose(
-#            [qcore], [self.molecule], asSmiles=False, asRows=True)[0][0]
-#
     def _fix_isotopes(self):
         """Include the atom map numbers in the substructure search in order to
         try to ensure a good alignment of the molecule to symmetric cores."""
@@ -178,8 +175,10 @@ class MoleculeImage:
                 else:
                     atom.SetIsotope(0)
 
-        #self.draw_mol = rdDepictor.GenerateDepictionMatching2DStructure(
-        #    self.draw_mol, self.core)
+    def _reorient_molecule(self):
+        """Reorients the drawing molecule following the core."""
+        rdDepictor.GenerateDepictionMatching2DStructure(
+            self.draw_mol, self.core)
 
     def _add_ring(self, group, color):
         """Add rings found in group to self.rings."""
@@ -256,7 +255,14 @@ class MoleculeImage:
             canvas_options.clearBackground = False
 
     def png(self):
-        """Create a PNG with the data."""
+        """Create a PNG with the data.
+
+            imgr = mapgen.MoleculeImage(pool_idx=1, pool=pool)
+
+            with open("MyMolecule.png", "wb") as r:
+                h.write(imgr.png())
+
+        """
         # Store which atoms, bonds, and rings will be highlighted
         highlights = [{}, {}, {}, {}]
 
@@ -266,8 +272,9 @@ class MoleculeImage:
         canvas_options.useBWAtomPalette()
 
         if self.core:
-            self._fix_isotopes()
-            self._remove_hs()
+            self._fix_isotopes()      #
+            self._remove_hs()         # Does this three belongs here ??
+            self._reorient_molecule() #
             # Loop over R groups.
             for color, (label, group) in zip(
                     self.palette, self.pool.groups[self.pool_idx].items()):
@@ -307,12 +314,14 @@ class MapGen():
         self.metric = network_obj.metric
         self.ligands = {}
         self.simF = None
-        self.molecules = None
-        self.mcs = None
+        # Beyond this line, a lot has been calculated in MoleculePool.
+        # Use it!
+        self.molecules = None  # TODO Change this to use Pool
+        self.mcs = None  # TODO Change this to use Pool
 
-        self._set_ligands()
+        self._set_ligands()  # TODO Change this to use Pool
         self._set_similarity_function()
-        self._set_mcs_core()
+        self._set_mcs_core()  # TODO Change this to use Pool
         self._set_similarity_matrix()
 
     def fingerprint(self, molecule):
