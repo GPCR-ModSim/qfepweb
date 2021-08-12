@@ -40,7 +40,7 @@ class MapGenerator(TestCase):
         m = mapgen.MapGen(network_obj=self.genObj)
 
         assert list(m.ligands.keys()) == [0]
-        assert list(m.ligands[0].keys()) == ["Name", "Mol", "FP", "df"]
+        assert list(m.ligands[0].keys()) == ["Name", "PoolIdx", "FP", "df"]
         assert len(list(m.ligands[0]["Name"])) == 16  # Items in the file
 
     def test_set_the_similarity_function(self):
@@ -134,20 +134,20 @@ class MapGenerator(TestCase):
     def test_mcs_calculation(self):
         m = mapgen.MapGen(network_obj=self.genObj)
 
-        assert m.mcs.smartsString == "[#6&R]1(:&@[#7&R]:&@[#6&R](-&!@[#8&!R]" +\
-            "-&!@[#6&!R]-&!@[#6&R]2-&@[#6&R]-&@[#6&R]-&@[#6&R]-&@[#6&R]-" +\
-            "&@[#6&R]-&@2):&@[#6&R]2:&@[#6&R](:&@[#7&R]:&@1):&@[#7&R]:" +\
-            "&@[#6&R]:&@[#7&R]:&@2)-&!@[#7&!R]-&!@[#6&R]1:&@[#6&R]:&@[#6&R]:" +\
-            "&@[#6&R]:&@[#6&R]:&@[#6&R]:&@1"
+        assert m.pool.mcs.smartsString == "[#6&R]1(:&@[#7&R]:&@[#6&R](-&!@[" +\
+            "#8&!R]-&!@[#6&!R]-&!@[#6&R]2-&@[#6&R]-&@[#6&R]-&@[#6&R]-&@[#6&" +\
+            "R]-&@[#6&R]-&@2):&@[#6&R]2:&@[#6&R](:&@[#7&R]:&@1):&@[#7&R]:&@" +\
+            "[#6&R]:&@[#7&R]:&@2)-&!@[#7&!R]-&!@[#6&R]1:&@[#6&R]:&@[#6&R]:&" +\
+            "@[#6&R]:&@[#6&R]:&@[#6&R]:&@1"
 
     def test_network_loading(self):
         """The network should be loaded at the beginning, because when the
         self.suppl gets consumed it becomes a pain to workwith."""
         m = mapgen.MapGen(network_obj=self.genObj)
 
-        assert len(m.molecules) == 16
-        assert m.molecules[0].GetProp("_Name") == "30"
-        assert [_.GetProp("_Name") for _ in m.molecules] == [
+        assert len(m.pool) == 16
+        assert m.pool[0].GetProp("_Name") == "30"
+        assert [_.GetProp("_Name") for _ in m.pool] == [
             '30', '28', '1oiy', '1oi9', '32', '1oiu', '29', '1h1r', '21', '26',
             '1h1s', '31', '20', '22', '17', '1h1q']
 
@@ -273,6 +273,27 @@ class PoolGenerator(TestCase):
     def test_group_decomposition(self):
         pool = mapgen.MoleculePool(self.molecules)
 
-        assert len(pool.groups) == 16
+        assert len(pool) == 16
         for molecule in pool.groups:
             assert list(molecule.keys()) == ["Core", "R1", "R2"]
+
+    def test_can_add_molecules_to_pool(self):
+        pool = mapgen.MoleculePool(self.molecules)
+
+        assert len(pool) == 16
+
+        pool.append(self.molecules[0])
+
+        assert len(pool) == 17
+
+    def test_can_grow_pool(self):
+        pool = mapgen.MoleculePool()
+
+        assert len(pool) == 0
+        assert len(pool.groups) == 0
+
+        for m in self.molecules:
+            pool.append(m)
+
+        assert len(pool) == 16
+        assert len(pool.groups) == 16

@@ -40,18 +40,36 @@ class MoleculePool:
     query_core: Same as core, but to use with decomposition.
     groups: A list of Core + Residues found for each molecule."""
 
-    def __init__(self, molecules):
-        self.molecules = molecules
-        self.groups  # By calling the property, it inits the core
+    def __init__(self, molecules=None):
+        self.molecules = []
+        if molecules:
+            self.molecules = molecules
 
     def __getitem__(self, idx):
         return self.molecules[idx]
 
+    def __len__(self):
+        return len(self.molecules)
+
+    def append(self, item):
+        """Adds a new molecule to the pool."""
+        self.molecules.append(item)
+        # Clear the cached properties so they get re-calculated
+        for attr in ["mcs", "core", "query_core", "groups"]:
+            try:
+                delattr(self, attr)
+            except AttributeError:
+                pass
+
     @cached_property
     def mcs(self):
-        if len(self.molecules) == 1:
-            # If the "pool" is only one, create a pool of two to cheat FindMCS.
-            # The MCS will be the whole molecule.
+        if len(self) == 0:
+            return
+        if len(self) == 1:
+            # If the "pool" is only one, create a pool of two to trick FindMCS.
+            #  The MCS returned will be the whole molecule.
+            # This is neeced because FindMCS returns a non-instantiable
+            #  ResultMCS object.
             molecules = [self.molecules[0], self.molecules[0]]
         else:
             molecules = self.molecules
@@ -64,13 +82,15 @@ class MoleculePool:
 
     @cached_property
     def core(self):
-        return Chem.MolFromSmarts(self.mcs.smartsString)
+        if self.mcs:
+            return Chem.MolFromSmarts(self.mcs.smartsString)
 
     @cached_property
     def query_core(self):
-        ps = Chem.AdjustQueryParameters.NoAdjustments()
-        ps.makeDummiesQueries = True
-        return Chem.AdjustQueryProperties(self.core, ps)
+        if self.core:
+            ps = Chem.AdjustQueryParameters.NoAdjustments()
+            ps.makeDummiesQueries = True
+            return Chem.AdjustQueryProperties(self.core, ps)
 
     @cached_property
     def groups(self):
@@ -81,8 +101,12 @@ class MoleculePool:
                 for atom in molecule.GetAtoms():
                     atom.SetIntProp("SourceAtomIdx", atom.GetIdx())
 
-        return Chem.rdRGroupDecomposition.RGroupDecompose(
-            [self.query_core], molecule_matches, asSmiles=False, asRows=True)[0]
+        if self.query_core:
+            return Chem.rdRGroupDecomposition.RGroupDecompose(
+                [self.query_core], molecule_matches, asSmiles=False,
+                asRows=True)[0]
+        else:
+            return []
 
 
 class MoleculeImage:
@@ -105,8 +129,11 @@ class MoleculeImage:
         """
         self.pool = pool  # This is the info of all other molecules
         self.pool_idx = pool_idx
-        self.molecule = Chem.Mol(self.pool[self.pool_idx])  # RDKit modifies the original
+        self.pool.groups  # This initializes the pool attributes
+
         # Create a new molecule to store the drawing changes
+        # RDKit modifies the original
+        self.molecule = Chem.Mol(self.pool[self.pool_idx])
         self.draw_mol = self.molecule
 
         self.palette = get_palette(name=palette)
@@ -312,16 +339,12 @@ class MapGen():
 
         self.network = network_obj
         self.metric = network_obj.metric
+        self.pool = MoleculePool()
         self.ligands = {}
         self.simF = None
-        # Beyond this line, a lot has been calculated in MoleculePool.
-        # Use it!
-        self.molecules = None  # TODO Change this to use Pool
-        self.mcs = None  # TODO Change this to use Pool
 
-        self._set_ligands()  # TODO Change this to use Pool
+        self._set_ligands()
         self._set_similarity_function()
-        self._set_mcs_core()  # TODO Change this to use Pool
         self._set_similarity_matrix()
 
     def fingerprint(self, molecule):
@@ -332,19 +355,6 @@ class MapGen():
                 molecule, 2, nBits=2048)
         elif self.metric == self.network.SMILES:
             return Chem.MolToSmiles(molecule, isomericSmiles=True)
-
-    def _set_mcs_core(self):
-        """Set the core MCS (Maximum Common Substructure) for the network."""
-        # Flatten all molecules in all charge groups
-        self.molecules = [mol for charge in self.ligands.values()
-                          for mol in charge["Mol"]]
-
-        # FIXME This blows up with single molecule SDF
-        self.mcs = rdFMCS.FindMCS(self.molecules,
-                                  matchValences=False,
-                                  ringMatchesRingOnly=True,
-                                  completeRingsOnly=True,
-                                  matchChiralTag=False)
 
     def _set_similarity_function(self):
         """Set the similarity function to be used with selected metric."""
@@ -364,8 +374,8 @@ class MapGen():
         if self.metric in [self.network.Tanimoto, self.network.MFP]:
             return self.simF(data['FP'][lig_i], data['FP'][lig_j])
         if self.metric == self.network.MCS:
-            score = self.simF([data['Mol'][lig_i],
-                               data['Mol'][lig_j]],
+            score = self.simF([self.pool[data["PoolIdx"][lig_i]],
+                               self.pool[data["PoolIdx"][lig_j]]],
                               atomCompare=rdFMCS.AtomCompare.CompareAny)
             return score.numAtoms + score.numBonds
         if self.metric == self.network.SMILES:
@@ -374,11 +384,12 @@ class MapGen():
                 1, -1, -0.5, -0.05)[0].score
 
     def _set_ligands(self):
-        for mol in self.suppl:
+        for idx, mol in enumerate(self.suppl):
+            self.pool.append(mol)
             charge = Chem.rdmolops.GetFormalCharge(mol)
-            v = self.ligands.setdefault(charge, {'Name': [], 'Mol': [], 'FP': []})
+            v = self.ligands.setdefault(charge, {'Name': [], 'PoolIdx': [], 'FP': []})
             v['Name'].append(mol.GetProp('_Name'))
-            v['Mol'].append(mol)
+            v['PoolIdx'].append(idx)
             if self.metric != self.network.MCS:
                 v['FP'].append(self.fingerprint(mol))
 
@@ -402,7 +413,7 @@ class MapGen():
             for i in value['df'].index:
                 for j in value['df'].columns:
                     if value['df'].loc[i, j] not in [1.0, 100] and not pd.isnull(value['df'].loc[i, j]):
-                        pairs_dict['{} {}'.format(i, j)] = round(value['df'].loc[i, j], 3)
+                        pairs_dict[(i, j)] = round(value['df'].loc[i, j], 3)
 
             if self.metric in [self.network.Tanimoto, self.network.MFP, self.network.MCS]:
                 pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=True)}
@@ -416,15 +427,13 @@ class MapGen():
         self.set_ligpairs()
         self.make_map()
 
-    def intersection(self, edge_list, candidate_edge):
-        r1, r2 = candidate_edge.split()[0], candidate_edge.split()[1]
+    def intersection(self, edge_list, r1, r2):
         for edge in edge_list:
             if r1 == edge[0] or r1 == edge[1] or r2 == edge[0] or r2 == edge[1]:
                 return True # Shortcut comparing: it's already True
         return False
 
-    def not_ingraph(self, node_list, candidate_edge):
-        r1, r2 = candidate_edge.split()[0], candidate_edge.split()[1]
+    def not_ingraph(self, node_list, r1, r2):
         return r1 not in node_list or r2 not in node_list
 
     def outer_nodes(self, G):
@@ -446,6 +455,8 @@ class MapGen():
             if len(lig['Name']) == 1:
                 # In case one ligand is found alone in a charge group
                 # Complete similarity matrix
+                # FIXME: How this make sense? Add edges when we know that there
+                #  is only one ligand?
                 ligcol = simdf[lig['Name']].sort_values(by=[lig['Name'][0]])
                 H.add_edge(lig['Name'][0], ligcol.index[1])
                 H.add_edge(lig['Name'][0], ligcol.index[2])
@@ -461,26 +472,24 @@ class MapGen():
                 lig['Graph'] = H
                 break
 
-            # 1. Make SPT
+            # 1. Make SPT (Shortest Path Tree)
             incomplete = True
             while incomplete:
-                for pert, score in lpd.items():
+                for (l1, l2), score in lpd.items():
                     if len(H.nodes) == len(lig['Name']):
                         incomplete = False
                         break
-                    l1, l2 = pert.split()[0], pert.split()[1]
                     if H.has_edge(l1, l2) or H.has_edge(l2, l1):
                         continue
-                    if len(H.nodes) == 0 or self.intersection(H.edges, pert) \
-                            and self.not_ingraph(H.nodes, pert):
+                    if len(H.nodes) == 0 or self.intersection(H.edges, l1, l2) \
+                            and self.not_ingraph(H.nodes, l1, l2):
                         H.add_edge(l1, l2, weight=score)
                         break
 
             # 2. Close Cycles
             while len(self.outer_nodes(H)) != 0:
                 added_edge = False
-                for pert, score in lpd.items():
-                    l1, l2 = pert.split()[0], pert.split()[1]
+                for (l1, l2), score in lpd.items():
 
                     if l1 in self.outer_nodes(H) or l2 in self.outer_nodes(H):
                         if (l1, l2) not in H.edges or (l2, l1) not in H.edges:
@@ -501,10 +510,9 @@ class MapGen():
             per_nodes = [k for k,v in nx.eigenvector_centrality(H, max_iter=1000).items() if v < 0.01]
             per_len = len(per_nodes)
             while per_len > 1:
-                for pert, score in lpd.items():
-                    l1, l2 = pert.split()[0], pert.split()[1]
+                for (l1, l2), score in lpd.items():
                     if l1 in per_nodes and l2 not in per_nodes or l1 not in per_nodes and l2 in per_nodes:
-                        if (l1, l2) not in H.edges or (l2, l1) not in H.edges and intersection(H.edges, pert):
+                        if (l1, l2) not in H.edges or (l2, l1) not in H.edges and intersection(H.edges, l1, l2):
                             H.add_edge(l1, l2, weight=score)
                             nlen = len([v for k,v in nx.eigenvector_centrality(H, max_iter=1000).items() if v < 0.01])
                             if nlen > per_len:

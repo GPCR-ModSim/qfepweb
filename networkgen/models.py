@@ -75,7 +75,7 @@ class Generator(TimeStampedModel):
         m = mapgen.MapGen(network_obj=self)
         m.make_map()
 
-        if len(m.molecules) < 2:
+        if len(m.pool) < 2:
             # FIXME: How does it work throwing an exception while serving?
             raise Exception(f"Number of ligands ({len(lignames)}) must be > 1")
 
@@ -83,9 +83,8 @@ class Generator(TimeStampedModel):
         Path(settings.MEDIA_ROOT / "molimages").mkdir(exist_ok=True)
 
         ligands = []
-        pool = mapgen.MoleculePool(m.molecules)
-        for i, molecule in enumerate(m.molecules):
-            moleculeImage = mapgen.MoleculeImage(pool_idx=i, pool=pool)
+        for i, molecule in enumerate(m.pool):
+            moleculeImage = mapgen.MoleculeImage(pool_idx=i, pool=m.pool)
             ligand = Ligand(
                 charge=Chem.rdmolops.GetFormalCharge(molecule),
                 atom_number=len(molecule.GetAtoms()),
