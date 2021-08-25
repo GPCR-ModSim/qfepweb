@@ -50,9 +50,13 @@ class Generator(TimeStampedModel):
         for charge in ligands.values():
             for edge in charge["Graph"].edges:
                 edges = [_.name for _ in charge["Ligand"] if _.pool_idx in edge]
+                weight = charge["Scores"].get(edge) or \
+                    charge["Scores"].get((edge[1], edge[0]))
 
                 result["edges"].append(
-                    {"from": str(key_ligands.get(edges[0]).uuid),
+                    {
+                     "label": str(weight),
+                     "from": str(key_ligands.get(edges[0]).uuid),
                      "to": str(key_ligands.get(edges[1]).uuid)})
 
             for node in charge["Graph"].nodes:
