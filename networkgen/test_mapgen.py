@@ -63,7 +63,7 @@ class MapGenTests(TestCase):
 
         m.make_map()
 
-        assert m.ligands[0]["Graph"].adj == {'18629-1': {}}
+        assert m.ligands[0]["Graph"].adj == {0: {}}
 
     def test_map_with_two_ligand(self):
         net = Network()
@@ -74,7 +74,10 @@ class MapGenTests(TestCase):
 
         m.make_map()
 
-        expected = {'30': {'28': {'weight': 48.5}},
-                    '28': {'30': {'weight': 48.5}}}
+        expected = {0: {1: {'weight': 48.5}},
+                    1: {0: {'weight': 48.5}}}
+
+        print(expected)
+        print(m.ligands[0]["Graph"].adj)
 
         assert m.ligands[0]["Graph"].adj == expected
