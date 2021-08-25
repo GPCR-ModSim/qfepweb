@@ -40,8 +40,8 @@ class MapGenerator(TestCase):
         m = mapgen.MapGen(network_obj=self.genObj)
 
         assert list(m.ligands.keys()) == [0]
-        assert list(m.ligands[0].keys()) == ["Name", "PoolIdx", "FP", "Scores"]
-        assert len(list(m.ligands[0]["Name"])) == 16  # Items in the file
+        assert list(m.ligands[0].keys()) == ["Ligand", "Scores"]
+        assert len(list(m.ligands[0]["Ligand"])) == 16  # Items in the file
 
     def test_set_the_similarity_function(self):
         self.genObj.metric = self.genObj.MCS

@@ -29,7 +29,7 @@ class MapGenTests(TestCase):
 
         m.make_map()
 
-        assert list(m.ligands[0].keys()) == ["Name", "PoolIdx", "FP", "Scores", "Graph"]
+        assert list(m.ligands[0].keys()) == ["Ligand", "Scores", "Graph"]
         expected = {
             0: {1: {'weight': 48.5}, 11: {'weight': 44.35}},
             1: {6: {'weight': 49.4}, 0: {'weight': 48.5},

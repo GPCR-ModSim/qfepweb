@@ -1,4 +1,5 @@
 import argparse
+from collections import namedtuple
 from functools import cached_property, lru_cache
 import io
 import itertools
@@ -32,6 +33,7 @@ def get_palette(name="OKABE"):
 
     return result
 
+Ligand = namedtuple("Ligand", ["name", "pool_idx", "fingerprint"])
 
 class MoleculePool:
     """Keeps track of a group of molecules, adding the properties needed.
@@ -323,7 +325,7 @@ class MoleculeImage:
         return self.canvas.GetDrawingText()  # This is a Png as a b"" string
 
 
-class MapGen():
+class MapGen:
     def __init__(self, network_obj=None, in_sdf=""):
         """Creates a Network from a Network Generator object.
 
@@ -391,11 +393,12 @@ class MapGen():
         for idx, mol in enumerate(self.suppl):
             self.pool.append(mol)
             charge = Chem.rdmolops.GetFormalCharge(mol)
-            v = self.ligands.setdefault(charge, {'Name': [], 'PoolIdx': [], 'FP': []})
-            v['Name'].append(mol.GetProp('_Name'))
-            v['PoolIdx'].append(idx)
-            if self.metric != self.network.MCS:
-                v['FP'].append(self.fingerprint(mol))
+            v = self.ligands.setdefault(charge, {"Ligand": []})
+            ligand = Ligand(name=mol.GetProp('_Name'),
+                            pool_idx=idx,
+                            fingerprint=self.fingerprint(mol))
+
+            v["Ligand"].append(ligand)
 
     def _set_similarity_matrix(self):
         # TODO document this and change function name (not a matrix anymore).
@@ -406,9 +409,9 @@ class MapGen():
         reverse = self.metric == self.network.SMILES
         for charge, ligands in self.ligands.items():
             ligands["Scores"] = {}
-            for l1, l2 in itertools.combinations(ligands["PoolIdx"], 2):
-                ligands["Scores"][(l1, l2)] = \
-                    self._ligands_score(l1, l2)
+            for l1, l2 in itertools.combinations(ligands["Ligand"], 2):
+                ligands["Scores"][(l1.pool_idx, l2.pool_idx)] = \
+                    self._ligands_score(l1.pool_idx, l2.pool_idx)
 
             ligands["Scores"] = \
                 {k: v for k, v in sorted(ligands["Scores"].items(),
@@ -422,22 +425,22 @@ class MapGen():
         #    self.set_ligpairs()
         H = nx.Graph()
 
-        if len(ligands['Name']) == 1:
+        if len(ligands['Ligand']) == 1:
             # In case one ligand is found alone in a charge group
             # A "graph" of one node and no edges is created.
-            H.add_node(ligands["Name"][0])
-        elif len(ligands['Name']) == 2:
+            H.add_node(ligands["Ligand"][0].name)
+        elif len(ligands['Ligand']) == 2:
             # In case two ligands are found in a charge group
             # Complete similarity matrix. At this point, stop graph
             # generation because two nodes in a graph will always result
             # in the same graph.
-            H.add_edge(ligands['Name'][0], ligands['Name'][1],
+            H.add_edge(ligands['Ligand'][0].name, ligands['Ligand'][1].name,
                        weight=ligands["Scores"][(0, 1)])
         else:
             incomplete = True
             while incomplete:
                 for (l1, l2), score in ligands["Scores"].items():
-                    if len(H.nodes) == len(ligands['Name']):
+                    if len(H.nodes) == len(ligands['Ligand']):
                         # All nodes has been added to the graph
                         incomplete = False
                         break

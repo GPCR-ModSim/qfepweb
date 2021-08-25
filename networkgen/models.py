@@ -47,16 +47,17 @@ class Generator(TimeStampedModel):
         result = {"nodes": [], "edges": []}
         key_ligands = {_.name: _ for _ in db_ligands}
 
-        for ligand in ligands.values():
-            for edge in ligand['Graph'].edges:
-                idx = (ligand["PoolIdx"].index(edge[0]),
-                       ligand["PoolIdx"].index(edge[1]))
+        for charge in ligands.values():
+            for edge in charge["Graph"].edges:
+                edges = [_.name for _ in charge["Ligand"] if _.pool_idx in edge]
+
                 result["edges"].append(
-                    {"from": str(key_ligands.get(ligand["Name"][idx[0]]).uuid),
-                     "to": str(key_ligands.get(ligand["Name"][idx[1]]).uuid)})
-            for node in ligand["Graph"].nodes:
-                idx = ligand["PoolIdx"].index(node)
-                node_ligand = key_ligands.get(ligand["Name"][idx])
+                    {"from": str(key_ligands.get(edges[0]).uuid),
+                     "to": str(key_ligands.get(edges[1]).uuid)})
+
+            for node in charge["Graph"].nodes:
+                name = [_.name for _ in charge["Ligand"] if _.pool_idx == node][0]
+                node_ligand = key_ligands.get(name)
                 result["nodes"].append(
                     {"label": node_ligand.name,
                      "image": node_ligand.image.url,
