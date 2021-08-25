@@ -98,13 +98,13 @@ class MoleculePool:
     @cached_property
     def groups(self):
         molecule_matches = []
-        for molecule in self.molecules:
-            if molecule.HasSubstructMatch(self.query_core):
-                molecule_matches.append(molecule)
-                for atom in molecule.GetAtoms():
-                    atom.SetIntProp("SourceAtomIdx", atom.GetIdx())
-
         if self.query_core:
+            for molecule in self.molecules:
+                if molecule.HasSubstructMatch(self.query_core):
+                    molecule_matches.append(molecule)
+                    for atom in molecule.GetAtoms():
+                        atom.SetIntProp("SourceAtomIdx", atom.GetIdx())
+
             return Chem.rdRGroupDecomposition.RGroupDecompose(
                 [self.query_core], molecule_matches, asSmiles=False,
                 asRows=True)[0]
@@ -428,13 +428,14 @@ class MapGen:
         if len(ligands['Ligand']) == 1:
             # In case one ligand is found alone in a charge group
             # A "graph" of one node and no edges is created.
-            H.add_node(ligands["Ligand"][0].name)
+            H.add_node(ligands["Ligand"][0].pool_idx)
         elif len(ligands['Ligand']) == 2:
             # In case two ligands are found in a charge group
             # Complete similarity matrix. At this point, stop graph
             # generation because two nodes in a graph will always result
             # in the same graph.
-            H.add_edge(ligands['Ligand'][0].name, ligands['Ligand'][1].name,
+            H.add_edge(ligands['Ligand'][0].pool_idx,
+                       ligands['Ligand'][1].pool_idx,
                        weight=ligands["Scores"][(0, 1)])
         else:
             incomplete = True
