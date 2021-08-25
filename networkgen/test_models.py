@@ -17,6 +17,8 @@ class GeneratorModel(TestCase):
         Path(settings.MEDIA_ROOT).mkdir(exist_ok=True)
         self.sdf_path = Path(__file__).parent / "test_files" / "CDK2_ligands.sdf"
         self.in_sdf = File(open(self.sdf_path, "rb"), name="CDK2_ligands.sdf")
+        self.multi_path = Path(__file__).parent / "test_files" / "EG5_multicharge.sdf"
+        self.multi_sdf = File(open(self.multi_path, "rb"), name="EG5_multicharge.sdf")
 
     def tearDown(self):
         for l in Ligand.objects.all():
@@ -60,3 +62,20 @@ class GeneratorModel(TestCase):
         for l in Ligand.objects.all():
             assert l.image.width == 400
             assert l.image.width == 400
+
+    def test_network_json_for_multicharge_sdf(self):
+        g = Generator(metric=Generator.SMILES, in_sdf=self.multi_sdf)
+        assert g.network is None
+        g.save()
+        network_json = json.loads(g.network)
+
+        assert list(network_json.keys()) == ["nodes", "edges"]
+
+        ligands = [(_.name, _.uuid, _.image.url) for _ in g.ligand_set.all()]
+        for node in network_json["nodes"]:
+            assert (node["label"], UUID(node["id"]), node["image"]) in ligands
+
+        uuids = [str(_) for _ in Ligand.objects.values_list("uuid", flat=True)]
+        for edge in network_json["edges"]:
+            assert edge["from"] in uuids
+            assert edge["to"] in uuids

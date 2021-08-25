@@ -44,24 +44,23 @@ class Generator(TimeStampedModel):
         # For future ref:
         # edge_keys = ["label", "freenrg", "sem", "crashes", "from", "to"]
         # node_keys = ["shape", "label", "image", "id"]
-        nodes = set([])
         result = {"nodes": [], "edges": []}
         key_ligands = {_.name: _ for _ in db_ligands}
 
         for ligand in ligands.values():
-            nodes = nodes | set(
-                [node for edge in ligand['Graph'].edges for node in edge])
             for edge in ligand['Graph'].edges:
+                idx = (ligand["PoolIdx"].index(edge[0]),
+                       ligand["PoolIdx"].index(edge[1]))
                 result["edges"].append(
-                    {"from": str(key_ligands.get(edge[0]).uuid),
-                     "to": str(key_ligands.get(edge[1]).uuid)})
-
-        for node in nodes:
-            node_ligand = key_ligands.get(node)
-            result["nodes"].append(
-                {"label": node_ligand.name,
-                 "image": node_ligand.image.url,
-                 "id": str(node_ligand.uuid)})
+                    {"from": str(key_ligands.get(ligand["Name"][idx[0]]).uuid),
+                     "to": str(key_ligands.get(ligand["Name"][idx[1]]).uuid)})
+            for node in ligand["Graph"].nodes:
+                idx = ligand["PoolIdx"].index(node)
+                node_ligand = key_ligands.get(ligand["Name"][idx])
+                result["nodes"].append(
+                    {"label": node_ligand.name,
+                     "image": node_ligand.image.url,
+                     "id": str(node_ligand.uuid)})
 
         return json.dumps(result)
 

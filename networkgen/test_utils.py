@@ -40,7 +40,7 @@ class MapGenerator(TestCase):
         m = mapgen.MapGen(network_obj=self.genObj)
 
         assert list(m.ligands.keys()) == [0]
-        assert list(m.ligands[0].keys()) == ["Name", "PoolIdx", "FP", "df"]
+        assert list(m.ligands[0].keys()) == ["Name", "PoolIdx", "FP", "Scores"]
         assert len(list(m.ligands[0]["Name"])) == 16  # Items in the file
 
     def test_set_the_similarity_function(self):
@@ -68,30 +68,24 @@ class MapGenerator(TestCase):
         ## MFP
         m = mapgen.MapGen(network_obj=self.genObj)
 
-        matrix = m.ligands[0]["df"]
-        assert matrix.shape == (16, 16)  # A matrix lig x lig
-        # Only the down triangle is calculated
-        assert matrix.iloc[1, 0] > 0
-        assert matrix.iloc[1, 0] != matrix.iloc[0, 1]
+        scores = m.ligands[0]["Scores"]
+        assert len(scores) == sum(range(1, 16))
         # Lets check some precalculated values
-        assert matrix.loc["28", "30"] == 0.8245614035087719
-        assert matrix.loc["1h1q", "30"] == 0.7272727272727273
-        assert matrix.loc["1h1q", "17"] == 0.7735849056603774
+        assert scores[(0, 1)] == 0.825
+        assert scores[(0, 15)] == 0.727
+        assert scores[(14, 15)] == 0.774
 
     def test_simmilarity_matrix_tanimoto(self):
         # Tanimoto
         self.genObj.metric = self.genObj.Tanimoto
         m = mapgen.MapGen(network_obj=self.genObj)
 
-        matrix = m.ligands[0]["df"]
-        assert matrix.shape == (16, 16)
-        # Only the down triangle is calculated
-        assert matrix.iloc[1, 0] > 0
-        assert matrix.iloc[1, 0] != matrix.iloc[0, 1]
+        scores = m.ligands[0]["Scores"]
+        assert len(scores) == sum(range(1, 16))
         # Lets check some precalculated values
-        assert matrix.loc["28", "30"] == 0.8771367521367521
-        assert matrix.loc["1h1q", "30"] == 0.8807870370370371
-        assert matrix.loc["1h1q", "17"] == 0.942998760842627
+        assert scores[(0, 1)] == 0.877
+        assert scores[(0, 15)] == 0.881
+        assert scores[(14, 15)] == 0.943
 
     def test_simmilarity_matrix_smiles(self):
         """This test is like the above "test_simmilarity_matrix" but it takes
@@ -100,17 +94,12 @@ class MapGenerator(TestCase):
         self.genObj.metric = self.genObj.SMILES
         m = mapgen.MapGen(network_obj=self.genObj)
 
-        matrix = m.ligands[0]["df"]
-        assert matrix.shape == (16, 16)
-        # Only the down triangle is calculated
-        assert matrix.iloc[1, 0] > 0
-        assert matrix.iloc[1, 0] != matrix.iloc[0, 1]
-        # Diagonal for this method is 100.0, not 1.0
-        assert matrix.iloc[0, 0] == 100.0
+        scores = m.ligands[0]["Scores"]
+        assert len(scores) == sum(range(1, 16))
         # Lets check some precalculated values
-        assert matrix.loc["28", "30"] == 48.5
-        assert matrix.loc["1h1q", "30"] == 38.05
-        assert matrix.loc["1h1q", "17"] == 36.45
+        assert scores[(0, 1)] == 48.5
+        assert scores[(0, 15)] == 38.05
+        assert scores[(14, 15)] == 36.45
 
     def test_simmilarity_matrix_mcs(self):
         """This test is like the above "test_simmilarity_matrix" but it takes
@@ -119,17 +108,12 @@ class MapGenerator(TestCase):
         self.genObj.metric = self.genObj.MCS
         m = mapgen.MapGen(network_obj=self.genObj)
 
-        matrix = m.ligands[0]["df"]
-        assert matrix.shape == (16, 16)
-        # Only the down triangle is calculated
-        assert matrix.iloc[1, 0] > 0
-        assert matrix.iloc[1, 0] != matrix.iloc[0, 1]
-        # Diagonal for this method is 100.0, not 1.0
-        assert matrix.iloc[0, 0] == 100.0
+        scores = m.ligands[0]["Scores"]
+        assert len(scores) == sum(range(1, 16))
         # Lets check some precalculated values
-        assert matrix.loc["28", "30"] == 59.0
-        assert matrix.loc["1h1q", "30"] == 51.0
-        assert matrix.loc["1h1q", "17"] == 51.0
+        assert scores[(0, 1)] == 59
+        assert scores[(0, 15)] == 51
+        assert scores[(14, 15)] == 51
 
     def test_mcs_calculation(self):
         m = mapgen.MapGen(network_obj=self.genObj)
@@ -168,8 +152,7 @@ class MapGenerator(TestCase):
 
         assert m.metric == obj.SMILES
 
-        assert m.ligands[0]["df"].shape == (16, 16)
-
+        assert len(m.ligands[0]["Scores"]) == sum(range(1, 16))
 
 class ImageGenerator(TestCase):
     """A class for creating molecule images."""

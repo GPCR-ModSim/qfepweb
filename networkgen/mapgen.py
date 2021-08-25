@@ -1,9 +1,10 @@
 import argparse
 from functools import cached_property, lru_cache
 import io
+import itertools
+import operator
 
 import networkx as nx
-import pandas as pd
 from rdkit import Chem, DataStructs, Geometry
 from rdkit.Chem import (AllChem, rdDepictor, rdFMCS, rdqueries,
                         rdRGroupDecomposition)
@@ -366,22 +367,25 @@ class MapGen():
             from Bio import pairwise2
             self.simF = pairwise2.align.globalms
 
-    def _ligands_score(self, data, lig_i, lig_j):
-        """Return a similarity score between lig_i and lig_j using self.simF."""
-        if lig_i == lig_j:
+    def _ligands_score(self, l1_idx, l2_idx):
+        """Return a similarity score between l1 and l2 using self.simF."""
+        if l1_idx == l2_idx:
             return 100.0 if self.metric in [self.network.SMILES, self.network.MCS] else 1.0
 
-        if self.metric in [self.network.Tanimoto, self.network.MFP]:
-            return self.simF(data['FP'][lig_i], data['FP'][lig_j])
         if self.metric == self.network.MCS:
-            score = self.simF([self.pool[data["PoolIdx"][lig_i]],
-                               self.pool[data["PoolIdx"][lig_j]]],
+            molecule_1 = self.pool[l1_idx]
+            molecule_2 = self.pool[l2_idx]
+            score = self.simF([molecule_1, molecule_2],
                               atomCompare=rdFMCS.AtomCompare.CompareAny)
             return score.numAtoms + score.numBonds
-        if self.metric == self.network.SMILES:
-            return self.simF(
-                data['FP'][lig_i], data['FP'][lig_j],
-                1, -1, -0.5, -0.05)[0].score
+        else:
+            fingerprint_1 = self.fingerprint(self.pool[l1_idx])
+            fingerprint_2 = self.fingerprint(self.pool[l2_idx])
+            if self.metric in [self.network.Tanimoto, self.network.MFP]:
+                return round(self.simF(fingerprint_1, fingerprint_2), 3)
+            if self.metric == self.network.SMILES:
+                return round(self.simF(fingerprint_1, fingerprint_2,
+                                       1, -1, -0.5, -0.05)[0].score, 3)
 
     def _set_ligands(self):
         for idx, mol in enumerate(self.suppl):
@@ -394,37 +398,112 @@ class MapGen():
                 v['FP'].append(self.fingerprint(mol))
 
     def _set_similarity_matrix(self):
+        # TODO document this and change function name (not a matrix anymore).
         # Ensure the self.ligands has been created
         if not self.ligands:
             self.set_ligands()
-        for charge, ligand in self.ligands.items():
-            df = pd.DataFrame()
-            ligands_done = []
-            for i, lig1 in enumerate(ligand['Name']):
-                for j, lig2 in enumerate(ligand['Name']):
-                    if lig2 not in ligands_done:
-                        df.loc[lig2, lig1] = self._ligands_score(ligand, i, j)
-                ligands_done.append(lig1)
-            self.ligands[charge]['df'] = df
 
-    def set_ligpairs(self):
-        for charge, value in self.ligands.items():
-            pairs_dict = {}
-            for i in value['df'].index:
-                for j in value['df'].columns:
-                    if value['df'].loc[i, j] not in [1.0, 100] and not pd.isnull(value['df'].loc[i, j]):
-                        pairs_dict[(i, j)] = round(value['df'].loc[i, j], 3)
+        reverse = self.metric == self.network.SMILES
+        for charge, ligands in self.ligands.items():
+            ligands["Scores"] = {}
+            for l1, l2 in itertools.combinations(ligands["PoolIdx"], 2):
+                ligands["Scores"][(l1, l2)] = \
+                    self._ligands_score(l1, l2)
 
-            if self.metric in [self.network.Tanimoto, self.network.MFP, self.network.MCS]:
-                pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=True)}
-            elif self.metric == self.network.SMILES:
-                pairs_dict = {k: v for k, v in sorted(pairs_dict.items(), key=lambda item: item[1], reverse=False)}
+            ligands["Scores"] = \
+                {k: v for k, v in sorted(ligands["Scores"].items(),
+                                         key=operator.itemgetter(1),
+                                         reverse=reverse)}
 
-            value['pairs_dict'] = pairs_dict
+    def build_charge_tree(self, ligands):
+        """Build a graph with all ligands provided."""
+        #if "pairs_dict" not in ligands:
+        #    # Call set_ligpairs the first iteration if it wasn't called before
+        #    self.set_ligpairs()
+        H = nx.Graph()
+
+        if len(ligands['Name']) == 1:
+            # In case one ligand is found alone in a charge group
+            # A "graph" of one node and no edges is created.
+            H.add_node(ligands["Name"][0])
+        elif len(ligands['Name']) == 2:
+            # In case two ligands are found in a charge group
+            # Complete similarity matrix. At this point, stop graph
+            # generation because two nodes in a graph will always result
+            # in the same graph.
+            H.add_edge(ligands['Name'][0], ligands['Name'][1],
+                       weight=ligands["Scores"][(0, 1)])
+        else:
+            incomplete = True
+            while incomplete:
+                for (l1, l2), score in ligands["Scores"].items():
+                    if len(H.nodes) == len(ligands['Name']):
+                        # All nodes has been added to the graph
+                        incomplete = False
+                        break
+                    if H.has_edge(l1, l2) or H.has_edge(l2, l1):
+                        # Both Nodes already in graph and connected
+                        continue
+                    if len(H.nodes) == 0 or self.intersection(H.edges, l1, l2) \
+                            and self.not_ingraph(H.nodes, l1, l2):
+                        H.add_edge(l1, l2, weight=score)
+                        break
+        return H
+
+    def close_cycles(self, ligands):
+        """Close open cycles in graph.
+
+        An outer node (open cycle) is defined as a Node with only one Edge.
+        """
+        outer_nodes = self.outer_nodes(ligands["Graph"])
+        while True:
+            added_edge = False
+            for (l1, l2), score in ligands["Scores"].items():
+                if l1 in outer_nodes or l2 in outer_nodes:
+                    if (l1, l2) not in ligands["Graph"].edges or \
+                            (l2, l1) not in ligands["Graph"].edges:
+                        ligands["Graph"].add_edge(l1, l2, weight=score)
+                        # signal that an edge has been added in this iteration
+                        # of the while loop.
+                        added_edge = True
+                        break
+
+            outer_nodes = self.outer_nodes(ligands["Graph"])
+            # if no edge has been added, the while loop will hang. Exit.
+            if not added_edge or len(outer_nodes) == 0:
+                break
+
+    def add_influence_edges(self, ligands):
+        def under_cent(graph):
+            return [v for k, v in
+                    nx.eigenvector_centrality(graph, max_iter=1000).items()
+                    if v < 0.01]
+
+        eig_cent = {k: v for k, v in sorted(
+            nx.eigenvector_centrality(ligands["Graph"], max_iter=1000).items(),
+            key=lambda item: item[1], reverse=True)}
+        per_nodes = [k for k, v in eig_cent.items() if v < 0.01]
+        per_len = len(per_nodes)
+
+        # FIXME: Potential hang loop here
+        while per_len > 1:
+            for (l1, l2), score in ligands["Scores"].items():
+                if (l1 in per_nodes and l2 not in per_nodes) or \
+                        (l1 not in per_nodes and l2 in per_nodes):
+                    if (l1, l2) not in ligands["Graph"].edges or \
+                            (l2, l1) not in ligands["Graph"].edges and \
+                            intersection(ligands["Graph"].edges, l1, l2):
+                        ligands["Graph"].add_edge(l1, l2, weight=score)
+                        nlen = len(under_cent(ligands["Graph"]))
+                        if nlen > per_len:
+                            ligands["Graph"].remove_edge(l1, l2)
+                            continue
+                        else:
+                            per_len = nlen
+                            break
 
     def process_map(self):
         self._set_similarity_matrix()
-        self.set_ligpairs()
         self.make_map()
 
     def intersection(self, edge_list, r1, r2):
@@ -444,85 +523,13 @@ class MapGen():
         return node_list
 
     def make_map(self):
-        for charge, lig in self.ligands.items():
-            if "pairs_dict" not in lig:
-                # Call set_ligpairs the first iteration if it wasn't called before
-                self.set_ligpairs()
-            H = nx.Graph()
-            lpd = self.ligands[charge]['pairs_dict']
-            simdf = self.ligands[charge]['df']
-
-            if len(lig['Name']) == 1:
-                # In case one ligand is found alone in a charge group
-                # Complete similarity matrix
-                # FIXME: How this make sense? Add edges when we know that there
-                #  is only one ligand?
-                ligcol = simdf[lig['Name']].sort_values(by=[lig['Name'][0]])
-                H.add_edge(lig['Name'][0], ligcol.index[1])
-                H.add_edge(lig['Name'][0], ligcol.index[2])
-                lig['Graph'] = H
-                break
-            elif len(lig['Name']) == 2:
-                # In case two ligands are found in a charge group
-                # Complete similarity matrix. At this point, stop graph
-                # generation because two nodes in a graph will always result
-                # in the same graph.
-                ligcol = simdf[lig['Name']].sort_values(by=[lig['Name'][0]])
-                H.add_edge(lig['Name'][0], lig['Name'][1])
-                lig['Graph'] = H
-                break
-
+        for charge, ligands in self.ligands.items():
             # 1. Make SPT (Shortest Path Tree)
-            incomplete = True
-            while incomplete:
-                for (l1, l2), score in lpd.items():
-                    if len(H.nodes) == len(lig['Name']):
-                        incomplete = False
-                        break
-                    if H.has_edge(l1, l2) or H.has_edge(l2, l1):
-                        continue
-                    if len(H.nodes) == 0 or self.intersection(H.edges, l1, l2) \
-                            and self.not_ingraph(H.nodes, l1, l2):
-                        H.add_edge(l1, l2, weight=score)
-                        break
-
+            ligands["Graph"] = self.build_charge_tree(ligands)
             # 2. Close Cycles
-            while len(self.outer_nodes(H)) != 0:
-                added_edge = False
-                for (l1, l2), score in lpd.items():
-
-                    if l1 in self.outer_nodes(H) or l2 in self.outer_nodes(H):
-                        if (l1, l2) not in H.edges or (l2, l1) not in H.edges:
-                            H.add_edge(l1, l2, weight=score)
-
-                            # signal that an edge has been added in this iteration
-                            # of the while loop.
-                            added_edge = True
-                            break
-
-                # if no edge has been added, the while loop will hang. Exit.
-                if not added_edge:
-                    break
-
+            self.close_cycles(ligands)
             # 3. Add influence edges
-            eig_cent = nx.eigenvector_centrality(H, max_iter=1000)
-            eig_cent = {k: v for k, v in sorted(eig_cent.items(), key=lambda item: item[1], reverse=True)}
-            per_nodes = [k for k,v in nx.eigenvector_centrality(H, max_iter=1000).items() if v < 0.01]
-            per_len = len(per_nodes)
-            while per_len > 1:
-                for (l1, l2), score in lpd.items():
-                    if l1 in per_nodes and l2 not in per_nodes or l1 not in per_nodes and l2 in per_nodes:
-                        if (l1, l2) not in H.edges or (l2, l1) not in H.edges and intersection(H.edges, l1, l2):
-                            H.add_edge(l1, l2, weight=score)
-                            nlen = len([v for k,v in nx.eigenvector_centrality(H, max_iter=1000).items() if v < 0.01])
-                            if nlen > per_len:
-                                H.remove_edge(l1, l2)
-                                continue
-                            else:
-                                per_len = nlen
-                                break
-            lig['Graph'] = H
-
+            self.add_influence_edges(ligands)
 
 # The following code is the CLI
 def getParser():
