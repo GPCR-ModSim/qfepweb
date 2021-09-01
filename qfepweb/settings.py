@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'debug_toolbar',
     'crispy_forms',
     'about',
+    'cluster',
     'common',
     'home',
     'networkgen',
