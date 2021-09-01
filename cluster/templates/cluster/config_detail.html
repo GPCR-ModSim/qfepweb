@@ -1,0 +1,11 @@
+import os
+
+# Root directory of the setup FEP modules
+ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
+
+# The directories to the input FF and run related input files are given here
+FF_DIR = os.path.join(ROOT_DIR, "{{ forcefield_dir }}")
+
+# CLUSTER INPUTS. To add your own cluster, use the same input as below
+CSB = {'NODES'        : '{{ nodes }}',
+       'NTASKS'       : '{{ tasks }}'}

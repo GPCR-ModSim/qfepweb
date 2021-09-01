@@ -4,5 +4,6 @@ from . import views as v
 
 app_name = "cluster"
 urlpatterns = [
-    path("", v.ConfigView.as_view(), name="create"),
+    path("", v.ConfigCreate.as_view(), name="create"),
+    path("detail", v.ConfigDetail.as_view(), name="detail"),
 ]
