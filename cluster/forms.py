@@ -42,6 +42,9 @@ class ConfigForm(forms.Form):
 
         self.helper = FormHelper()
         self.helper.form_action = ''
+        self.fields["qdyn_path"].label = "QDYN path"
+        self.fields["qprep_path"].label = "QPREP path"
+        self.fields["qfep_path"].label = "QFEP path"
 
         self.helper.layout = Layout(
             Fieldset(

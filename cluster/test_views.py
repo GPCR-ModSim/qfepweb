@@ -18,6 +18,13 @@ class Config(TestCase):
 
         assert helper_text in page.content.decode()
 
+    def test_labels_in_page(self):
+        page = self.client.get(reverse('cluster:create'))
+        labels = ["QDYN path", "QPREP path", "QFEP path"]
+
+        for label in labels:
+            assert label in page.content.decode()
+
     def test_form_submission(self):
         response = self.client.post(reverse('cluster:create'),
                                     {"forcefield_directory": "FF",
