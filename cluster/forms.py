@@ -1,3 +1,4 @@
+from datetime import timedelta
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import (ButtonHolder, Div, Layout, Fieldset, Reset,
                                  Submit)
@@ -11,15 +12,15 @@ class ConfigForm(forms.Form):
     username = forms.CharField(
         help_text="The SLURM username used for submitting jobs on the cluster.")
     qdyn_path = forms.CharField(
-        help_text="The path to the QDYN binary. For example: /path/to/software/q/bin/qdyn")
+        help_text="The path to the QDYN binary.")
     qprep_path = forms.CharField(
-        help_text="The path to the QPREP binary. For example: /path/to/software/q/bin/qprep")
+        help_text="The path to the QPREP binary.")
     qfep_path = forms.CharField(
-        help_text="The path to the QFEP binary. For example: /path/to/software/q/bin/qfep")
+        help_text="The path to the QFEP binary.")
     root_directory = forms.CharField(
         help_text="The directory to run FEP in.")
     forcefield_directory = forms.CharField(
-        help_text="The directory that contains the required Force Field. For example: /path/to/forcefields/")
+        help_text="The directory that contains the required Force Field.")
     nodes = forms.IntegerField(
         initial=1,
         min_value=1,
@@ -30,22 +31,35 @@ class ConfigForm(forms.Form):
         min_value=1,
         max_value=32,
         help_text="The number of tasks per job.")
-    runtime = forms.TimeField(
-        input_formats=["%H:%M:%S", "%H:%M"],
-        help_text="The maximum job runtime. Input in HH:MM:SS.")
+    runtime = forms.DurationField(
+        help_text="The maximum job runtime.")
     modules = forms.CharField(
         help_text="Additional SLURM modules required per job. Input as comma-separated list.",
         required=False)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.helper = FormHelper()
-        self.helper.form_action = ''
+    def _set_labels(self):
         self.fields["qdyn_path"].label = "QDYN path"
         self.fields["qprep_path"].label = "QPREP path"
         self.fields["qfep_path"].label = "QFEP path"
 
+    def _set_placeholders(self):
+        phs = {"forcefield_directory": "/path/to/forcefields/",
+               "qdyn_path": "/path/to/software/q/bin/qdyn",
+               "qprep_path": "/path/to/software/q/bin/qprep",
+               "qfep_path": "/path/to/software/q/bin/qfep",
+               "runtime": "DD HH:MM:SS"}
+
+        for name, ph in phs.items():
+            self.fields[name].widget.attrs["placeholder"] = ph
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._set_labels()
+        self._set_placeholders()
+
+        self.helper = FormHelper()
+        self.helper.form_action = ''
         self.helper.layout = Layout(
             Fieldset(
                 "Cluster Configuration file generation",
@@ -78,8 +92,15 @@ class ConfigForm(forms.Form):
                 Reset("reset", "Reset")))
 
     def clean_runtime(self):
-        # TimeField is parsed into a datetime.time object, which is not
+        # DurationField is parsed into a datetime.timedelta object, which is not
         #  serializable as Json unless turned into a string.
         data = self.cleaned_data["runtime"]
 
-        return str(data)
+        if isinstance(data, timedelta):
+            result = ""
+            if data.days > 0:
+                result = f"{data.days}d-"
+
+            result += f"{timedelta(seconds=data.seconds)}"
+            return result
+        return data

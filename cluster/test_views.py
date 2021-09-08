@@ -25,6 +25,12 @@ class Config(TestCase):
         for label in labels:
             assert label in page.content.decode()
 
+    def test_placeholders_in_page(self):
+        page = self.client.get(reverse('cluster:create'))
+
+        for ph in ["/path/to/software/q/bin/qdyn", "DD HH:MM:SS"]:
+            assert ph in page.content.decode()
+
     def test_form_submission(self):
         response = self.client.post(reverse('cluster:create'),
                                     {"forcefield_directory": "FF",
@@ -40,7 +46,6 @@ class Config(TestCase):
                                     follow=True)
 
         assert response.status_code == 200
-        print(response.content.decode())
         assert response.headers.get("Content-Type") == "text/plain; charset=utf-8"
 
         assert response.content.decode() == \
