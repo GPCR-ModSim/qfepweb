@@ -12,11 +12,11 @@ class ConfigForm(TestCase):
         print(renderedForm)
 
         assert "Cluster Config" in renderedForm
-        assert 'name="forcefield_dir"' in renderedForm
+        assert 'name="forcefield_directory"' in renderedForm
 
     def test_form_buttons(self):
         form = forms.ConfigForm()
         renderedForm = form.helper.render_layout(form, Context({}))
 
-        assert "Submit" in renderedForm
+        assert "Download configuration file" in renderedForm
         assert "Reset" in renderedForm

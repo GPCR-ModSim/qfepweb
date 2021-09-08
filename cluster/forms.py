@@ -10,11 +10,11 @@ class ConfigForm(forms.Form):
 
     username = forms.CharField(
         help_text="The SLURM username used for submitting jobs on the cluster.")
-    QDYN_path = forms.CharField(
+    qdyn_path = forms.CharField(
         help_text="The path to the QDYN binary. For example: /path/to/software/q/bin/qdyn")
-    QPREP_path = forms.CharField(
+    qprep_path = forms.CharField(
         help_text="The path to the QPREP binary. For example: /path/to/software/q/bin/qprep")
-    QFEP_path = forms.CharField(
+    qfep_path = forms.CharField(
         help_text="The path to the QFEP binary. For example: /path/to/software/q/bin/qfep")
     root_directory = forms.CharField(
         help_text="The directory to run FEP in.")
@@ -30,11 +30,9 @@ class ConfigForm(forms.Form):
         min_value=1,
         max_value=32,
         help_text="The number of tasks per job.")
-    runtime = forms.IntegerField(
-        initial=4,
-        min_value=1,
-        max_value=32,
-        help_text="The maximum job runtime. Input in d-hh:mm:ss.")
+    runtime = forms.TimeField(
+        input_formats=["%H:%M:%S", "%H:%M"],
+        help_text="The maximum job runtime. Input in HH:MM:SS.")
     modules = forms.CharField(
         help_text="Additional SLURM modules required per job. Input as comma-separated list.",
         required=False)
@@ -53,13 +51,13 @@ class ConfigForm(forms.Form):
                     Div("root_directory", css_class="col-sm-8"),
                     css_class="row"),
                 Div(
-                    Div("QDYN_path", css_class="col-sm-12"),
+                    Div("qdyn_path", css_class="col-sm-12"),
                     css_class="row"),
                 Div(
-                    Div("QPREP_path", css_class="col-sm-12"),
+                    Div("qprep_path", css_class="col-sm-12"),
                     css_class="row"),
                 Div(
-                    Div("QFEP_path", css_class="col-sm-12"),
+                    Div("qfep_path", css_class="col-sm-12"),
                     css_class="row"),
                 Div(
                     Div("forcefield_directory", css_class="col-sm-12"),
@@ -75,3 +73,10 @@ class ConfigForm(forms.Form):
             ButtonHolder(
                 Submit("submit", "Download configuration file", css_class="bg-cp1"),
                 Reset("reset", "Reset")))
+
+    def clean_runtime(self):
+        # TimeField is parsed into a datetime.time object, which is not
+        #  serializable as Json unless turned into a string.
+        data = self.cleaned_data["runtime"]
+
+        return str(data)

@@ -1,3 +1,4 @@
+from datetime import time
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -13,18 +14,26 @@ class Config(TestCase):
 
     def test_helper_texts_in_page(self):
         page = self.client.get(reverse('cluster:create'))
-        helper_text = forms.ConfigForm().fields["forcefield_dir"].help_text
+        helper_text = forms.ConfigForm().fields["forcefield_directory"].help_text
 
         assert helper_text in page.content.decode()
 
     def test_form_submission(self):
         response = self.client.post(reverse('cluster:create'),
-                                    {"forcefield_dir": "FF",
+                                    {"forcefield_directory": "FF",
+                                     "root_directory": "ROOT",
+                                     "qdyn_path": "qdyn/path",
+                                     "qprep_path": "qprep/path",
+                                     "qfep_path": "qfep/path",
+                                     "username": "userX",
+                                     "runtime": time(23, 59, 59),
+                                     "modules": "module1, module2, module3",
                                      "nodes": 1,
                                      "tasks": 16},
                                     follow=True)
 
         assert response.status_code == 200
+        print(response.content.decode())
         assert response.headers.get("Content-Type") == "text/plain; charset=utf-8"
 
         assert response.content.decode() == \
