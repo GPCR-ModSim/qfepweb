@@ -1,7 +1,7 @@
 from datetime import timedelta
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import (ButtonHolder, Div, Layout, Fieldset, Reset,
-                                 Submit)
+from crispy_forms.layout import (ButtonHolder, Div, Fieldset, HTML, Layout,
+                                 Reset, Submit)
 from django import forms
 
 # 'QDYN'       : 'qdyn=/home/x_aledi/software/q6/bin/qdynp', #fix qdyn= !!!!!
@@ -61,12 +61,13 @@ class ConfigForm(forms.Form):
         self.helper = FormHelper()
         self.helper.form_action = ''
         self.helper.layout = Layout(
+            HTML("<h2>Cluster Configuration file generation</h2>"),
+            Div(
+                Div("username", css_class="col-sm-4"),
+                Div("root_directory", css_class="col-sm-8"),
+                css_class="row"),
             Fieldset(
-                "Cluster Configuration file generation",
-                Div(
-                    Div("username", css_class="col-sm-4"),
-                    Div("root_directory", css_class="col-sm-8"),
-                    css_class="row"),
+                "Q package paths",
                 Div(
                     Div("qdyn_path", css_class="col-sm-12"),
                     css_class="row"),
@@ -78,15 +79,17 @@ class ConfigForm(forms.Form):
                     css_class="row"),
                 Div(
                     Div("forcefield_directory", css_class="col-sm-12"),
-                    css_class="row"),
+                    css_class="row")),
+            Fieldset(
+                "Slurm config",
                 Div(
                     Div("nodes", css_class="col-sm-4"),
                     Div("tasks", css_class="col-sm-4"),
-                    css_class="row")),
-                Div(
                     Div("runtime", css_class="col-sm-4"),
-                    Div("modules", css_class="col-sm-4"),
                     css_class="row"),
+                Div(
+                    Div("modules", css_class="col-sm-12"),
+                    css_class="row")),
             ButtonHolder(
                 Submit("submit", "Download configuration file", css_class="bg-cp1"),
                 Reset("reset", "Reset")))
