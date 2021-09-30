@@ -46,6 +46,19 @@ pending migrations are the Django default tables. Apply it with:
 
     $ python manage.py migrate
 
+# Continuous deployment
+
+There's a dirty script to quickly apply everything needed at the server to
+sync with the code:
+
+    $ ./deploy.sh
+
+This should work with any repo, except for the last command that restarts the
+systemctl unit which only works at the server. Other boxes might and should fail
+with:
+
+    Failed to restart qfepweb.service: Unit qfepweb.service not found.
+
 # General Notes
 
 If you want to install using python3.6 and CentOS there's a big possibility of a version crash between sqlite3 < version 3.6.20 and Django 3.2.
