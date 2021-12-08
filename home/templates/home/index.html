@@ -1,7 +1,22 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}QFEPweb{% endblock %}
 
 {% block content %}
+ <div class="container">
+  <div class="row">
+   <div class="col-lg-8">
+    {% lorem 2 p random %}
+   </div>
+   <div class="col-lg-4">
+    <img src="{% static 'img/holder.png' %}" width="100%" class="my-3 rounded d-block"/>
+   </div>
+
+   <div>
+    {% lorem 2 p random %}
+   </div>
+  </div>
+ </div>
 
 {% endblock %}
