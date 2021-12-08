@@ -1,10 +1,12 @@
 import io
 import json
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from uuid import UUID
 
 from django.test import TestCase
 from model_bakery import baker
+from diffimg import diff
 from rdkit import Chem
 from rdkit.DataStructs import FingerprintSimilarity
 
@@ -219,8 +221,9 @@ class ImageGenerator(TestCase):
         imgr = mapgen.MoleculeImage(pool_idx=0,
                                     pool=self.pool)
 
-        with open(self.test_files / "Sample30.png", "rb") as r:
-            assert imgr.png() == r.read()
+        with NamedTemporaryFile() as tmpimg:
+            tmpimg.write(imgr.png())
+            assert diff(self.test_files / "Sample30.png", tmpimg.name) < 0.01
 
     def test_png_from_smiles(self):
         mol1 = Chem.MolFromSmiles('Cc1nc(C)c(s1)c2ccnc(Nc3ccccc3F)n2')
@@ -229,14 +232,17 @@ class ImageGenerator(TestCase):
 
         imgr = mapgen.MoleculeImage(pool_idx=1, pool=pool)
         imgr.name = "Sample"
-        with open(self.test_files / "HollowRing.png", "rb") as r:
-            assert imgr.png() == r.read()
+        with NamedTemporaryFile() as tmpimg:
+            tmpimg.write(imgr.png())
+            assert diff(self.test_files / "HollowRing.png", tmpimg.name) < 0.01
 
         imgr = mapgen.MoleculeImage(pool_idx=1, pool=pool)
         imgr.fill_rings = True
         imgr.name = "Sample2"
-        with open(self.test_files / "FilledRing.png", "rb") as r:
-            assert imgr.png() == r.read()
+        with NamedTemporaryFile() as tmpimg:
+            tmpimg.write(imgr.png())
+            assert diff(self.test_files / "FilledRing.png", tmpimg.name) < 0.01
+
 
 class PoolGenerator(TestCase):
     def setUp(self):
