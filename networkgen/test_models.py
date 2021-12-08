@@ -41,14 +41,14 @@ class GeneratorModel(TestCase):
         g.save()
         network_json = json.loads(g.network)
 
-        assert list(network_json.keys()) == ["nodes", "edges"]
+        assert list(network_json.keys()) == ["0"]
 
         ligands = [(_.name, _.uuid, _.image.url) for _ in g.ligand_set.all()]
-        for node in network_json["nodes"]:
+        for node in network_json["0"]["nodes"]:
             assert (node["label"], UUID(node["id"]), node["image"]) in ligands
 
         uuids = [str(_) for _ in Ligand.objects.values_list("uuid", flat=True)]
-        for edge in network_json["edges"]:
+        for edge in network_json["0"]["edges"]:
             assert edge["from"] in uuids
             assert edge["to"] in uuids
 
@@ -69,13 +69,15 @@ class GeneratorModel(TestCase):
         g.save()
         network_json = json.loads(g.network)
 
-        assert list(network_json.keys()) == ["nodes", "edges"]
+        assert list(network_json.keys()) == ["0", "1"]
 
         ligands = [(_.name, _.uuid, _.image.url) for _ in g.ligand_set.all()]
-        for node in network_json["nodes"]:
-            assert (node["label"], UUID(node["id"]), node["image"]) in ligands
+        for charge in network_json.keys():
+            for node in network_json[charge]["nodes"]:
+                assert (node["label"], UUID(node["id"]), node["image"]) in ligands
 
         uuids = [str(_) for _ in Ligand.objects.values_list("uuid", flat=True)]
-        for edge in network_json["edges"]:
-            assert edge["from"] in uuids
-            assert edge["to"] in uuids
+        for charge in network_json.keys():
+            for edge in network_json[charge]["edges"]:
+                assert edge["from"] in uuids
+                assert edge["to"] in uuids

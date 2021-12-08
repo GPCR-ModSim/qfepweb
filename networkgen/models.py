@@ -15,6 +15,7 @@ from networkgen import validators as v
 
 logger = logging.getLogger(__name__)
 
+
 class Generator(TimeStampedModel):
     """A model that holds parameters for the FEP network generator."""
 
@@ -44,28 +45,30 @@ class Generator(TimeStampedModel):
         # For future ref:
         # edge_keys = ["label", "freenrg", "sem", "crashes", "from", "to"]
         # node_keys = ["shape", "label", "image", "id"]
-        result = {"nodes": [], "edges": []}
+        result = {}
         key_ligands = {_.name: _ for _ in db_ligands}
 
-        for charge in ligands.values():
-            for edge in charge["Graph"].edges:
-                edges = [_.name for _ in charge["Ligand"] if _.pool_idx in edge]
-                weight = charge["Scores"].get(edge) or \
-                    charge["Scores"].get((edge[1], edge[0]))
+        for charge, values in ligands.items():
+            charge_result = {"nodes": [], "edges": []}
+            for edge in values["Graph"].edges:
+                edges = [_.name for _ in values["Ligand"] if _.pool_idx in edge]
+                weight = values["Scores"].get(edge) or \
+                    values["Scores"].get((edge[1], edge[0]))
 
-                result["edges"].append(
+                charge_result["edges"].append(
                     {
                      "label": str(weight),
                      "from": str(key_ligands.get(edges[0]).uuid),
                      "to": str(key_ligands.get(edges[1]).uuid)})
 
-            for node in charge["Graph"].nodes:
-                name = [_.name for _ in charge["Ligand"] if _.pool_idx == node][0]
+            for node in values["Graph"].nodes:
+                name = [_.name for _ in values["Ligand"] if _.pool_idx == node][0]
                 node_ligand = key_ligands.get(name)
-                result["nodes"].append(
+                charge_result["nodes"].append(
                     {"label": node_ligand.name,
                      "image": node_ligand.image.url,
                      "id": str(node_ligand.uuid)})
+            result[charge] = charge_result
 
         return json.dumps(result)
 

@@ -37,17 +37,19 @@
  <div id="network-btns">
   <button id="btn-undo" type="button" class="btn btn-light"><i class="fas fa-arrow-left "></i></button>
   <button id="btn-redo" type="button" class="btn btn-light"><i class="fas fa-arrow-right "></i></button>
+  <label for="selected-charge"> Charge group </label>
+  <select class="form-select" name="selected-charge" id="selected-charge">
+   <option value="0" selected>0</option>
+   <option value="1">1</option>
+  </select>
   <button id="save-sele" type="button" class="btn btn-light">Save Group
   </button>
-  <button id="shake-up" type="button" class="btn btn-light">Shake
+  <button id="shake-up" type="button" class="btn btn-light">Physics
   </button>
   <button id="extract-positions" type="button" class="btn btn-light">Finish
   </button>
  </div>
  <div id="mynetwork"></div>
- <script>
-  window.onload=draw();
- </script>
 {% endblock %}
 
 {% block modal %}
