@@ -167,7 +167,6 @@ function savegraph(){
 // Get out JSON data.
 var network = null;
 
-// FIXME: Take all nodes
 function load_charge(charge=0){
   var nodes = new vis.DataSet(json_data[charge].nodes);
   var edges = new vis.DataSet(json_data[charge].edges);
@@ -185,162 +184,160 @@ function load_charge(charge=0){
 
 //initialize
 // FIXME
-//function history(){
-//  let history_list_back = [];
-//  let history_list_forward = [];
-//
-//  // initial data
-//  history_list_back.push({
-//    nodes_his: data.nodes.get(data.nodes.getIds()),
-//    edges_his: data.edges.get(data.edges.getIds())
-//  });
-//  // event on
-//  data.nodes.on("*", change_history_back);
-//  data.edges.on("*", change_history_back);
-//}
-//
-//function change_history_back() {
-//  history_list_back.unshift({
-//    nodes_his: data.nodes.get(data.nodes.getIds()),
-//    edges_his: data.edges.get(data.edges.getIds())
-//  });
-//  //reset forward history
-//  history_list_forward = [];
-//  // apply css
-//  css_for_manipulation();
-//}
-//function redo_css_active() {
-//  $("#btn-undo").css({
-//    "background-color": "inherit",
-//    color: "#878787",
-//    cursor: "pointer"
-//  });
-//};
-//function undo_css_active() {
-//  $("#btn-redo").css({
-//    "background-color": "inherit",
-//    color: "#878787",
-//    cursor: "pointer"
-//  });
-//};
-//
-//function redo_css_inactive() {
-//  $("#btn-undo").css({
-//    "background-color": "inherit",
-//    color: "#EBEBEB",
-//    cursor: "inherit"
-//  });
-//};
-//
-//function undo_css_inactive() {
-//  $("#btn-redo").css({
-//    "background-color": "inherit",
-//    color: "#EBEBEB",
-//    cursor: "inherit"
-//  });
-//};
-//
-//function css_for_manipulation() {
-//  if (history_list_back.length === 1) {
-//    redo_css_inactive();
-//  } else {
-//    redo_css_active();
-//  };
-//  if (history_list_forward.length === 0) {
-//    undo_css_inactive();
-//  } else {
-//    undo_css_active();
-//  };
-//};
-//
-//function undo(){
-//  if (history_list_back.length > 1) {
-//    const current_nodes = data.nodes.get(data.nodes.getIds());
-//    const current_edges = data.edges.get(data.edges.getIds());
-//    const previous_nodes = history_list_back[1].nodes_his;
-//    const previous_edges = history_list_back[1].edges_his;
-//    // event off
-//    data.nodes.off("*", change_history_back);
-//    data.edges.off("*", change_history_back);
-//    // undo without events
-//    if (current_nodes.length > previous_nodes.length) {
-//      const previous_nodes_diff = _.differenceBy(
-//        current_nodes,
-//        previous_nodes,
-//        "id"
-//      );
-//      data.nodes.remove(previous_nodes_diff);
-//    } else {
-//      data.nodes.update(previous_nodes);
-//    }
-//
-//    if (current_edges.length > previous_edges.length) {
-//      const previous_edges_diff = _.differenceBy(
-//        current_edges,
-//        previous_edges,
-//        "id"
-//      );
-//      data.edges.remove(previous_edges_diff);
-//    } else {
-//      data.edges.update(previous_edges);
-//    }
-//    // recover event on
-//    data.nodes.on("*", change_history_back);
-//    data.edges.on("*", change_history_back);
-//
-//    history_list_forward.unshift({
-//      nodes_his: history_list_back[0].nodes_his,
-//      edges_his: history_list_back[0].edges_his
-//    });
-//    history_list_back.shift();
-//            // apply css
-//    css_for_manipulation();
-//  }
-//};
-//
-//function redo(){
-//  if (history_list_forward.length > 0) {
-//    const current_nodes = data.nodes.get(data.nodes.getIds());
-//    const current_edges = data.edges.get(data.edges.getIds());
-//    const forward_nodes = history_list_forward[0].nodes_his;
-//    const forward_edges = history_list_forward[0].edges_his;
-//    // event off
-//    data.nodes.off("*", change_history_back);
-//    data.edges.off("*", change_history_back);
-//    // redo without events
-//    if (current_nodes.length > forward_nodes.length) {
-//      const forward_nodes_diff = _.differenceBy(
-//        current_nodes,
-//        forward_nodes,
-//        "id"
-//      );
-//      data.nodes.remove(forward_nodes_diff);
-//    } else {
-//      data.nodes.update(forward_nodes);
-//    }
-//    if (current_edges.length > forward_edges.length) {
-//      const forward_edges_diff = _.differenceBy(
-//        current_edges,
-//        forward_edges,
-//        "id"
-//      );
-//      data.edges.remove(forward_edges_diff);
-//    } else {
-//      data.edges.update(forward_edges);
-//    }
-//    // recover event on
-//    data.nodes.on("*", change_history_back);
-//    data.edges.on("*", change_history_back);
-//    history_list_back.unshift({
-//      nodes_his: history_list_forward[0].nodes_his,
-//      edges_his: history_list_forward[0].edges_his
-//    });
-//    // history_list_forward
-//    history_list_forward.shift();
-//        // apply css
-//    css_for_manipulation();
-//  }
-//};
+let history_list_back = [];
+let history_list_forward = [];
+function history(data){
+  // initial data
+  history_list_back.push({
+    nodes_his: data.nodes.get(data.nodes.getIds()),
+    edges_his: data.edges.get(data.edges.getIds())
+  });
+  // event on
+  data.nodes.on("*", change_history_back(data));
+  data.edges.on("*", change_history_back(data));
+}
+
+function change_history_back(data) {
+  history_list_back.unshift({
+    nodes_his: data.nodes.get(data.nodes.getIds()),
+    edges_his: data.edges.get(data.edges.getIds())
+  });
+  //reset forward history
+  history_list_forward = [];
+  // apply css
+  css_for_manipulation();
+}
+function redo_css_active() {
+  $("#btn-undo").css({
+    "background-color": "inherit",
+    color: "#878787",
+    cursor: "pointer"
+  });
+};
+function undo_css_active() {
+  $("#btn-redo").css({
+    "background-color": "inherit",
+    color: "#878787",
+    cursor: "pointer"
+  });
+};
+function redo_css_inactive() {
+  $("#btn-undo").css({
+    "background-color": "inherit",
+    color: "#EBEBEB",
+    cursor: "inherit"
+  });
+};
+
+function undo_css_inactive() {
+  $("#btn-redo").css({
+    "background-color": "inherit",
+    color: "#EBEBEB",
+    cursor: "inherit"
+  });
+};
+
+function css_for_manipulation() {
+  if (history_list_back.length === 1) {
+    redo_css_inactive();
+  } else {
+    redo_css_active();
+  };
+  if (history_list_forward.length === 0) {
+    undo_css_inactive();
+  } else {
+    undo_css_active();
+  };
+};
+
+function undo(){
+  if (history_list_back.length > 1) {
+    const current_nodes = data.nodes.get(data.nodes.getIds());
+    const current_edges = data.edges.get(data.edges.getIds());
+    const previous_nodes = history_list_back[1].nodes_his;
+    const previous_edges = history_list_back[1].edges_his;
+    // event off
+    data.nodes.off("*", change_history_back);
+    data.edges.off("*", change_history_back);
+    // undo without events
+    if (current_nodes.length > previous_nodes.length) {
+      const previous_nodes_diff = _.differenceBy(
+        current_nodes,
+        previous_nodes,
+        "id"
+      );
+      data.nodes.remove(previous_nodes_diff);
+    } else {
+      data.nodes.update(previous_nodes);
+    }
+
+    if (current_edges.length > previous_edges.length) {
+      const previous_edges_diff = _.differenceBy(
+        current_edges,
+        previous_edges,
+        "id"
+      );
+      data.edges.remove(previous_edges_diff);
+    } else {
+      data.edges.update(previous_edges);
+    }
+    // recover event on
+    data.nodes.on("*", change_history_back);
+    data.edges.on("*", change_history_back);
+
+    history_list_forward.unshift({
+      nodes_his: history_list_back[0].nodes_his,
+      edges_his: history_list_back[0].edges_his
+    });
+    history_list_back.shift();
+            // apply css
+    css_for_manipulation();
+  }
+};
+
+function redo(){
+  if (history_list_forward.length > 0) {
+    const current_nodes = data.nodes.get(data.nodes.getIds());
+    const current_edges = data.edges.get(data.edges.getIds());
+    const forward_nodes = history_list_forward[0].nodes_his;
+    const forward_edges = history_list_forward[0].edges_his;
+    // event off
+    data.nodes.off("*", change_history_back);
+    data.edges.off("*", change_history_back);
+    // redo without events
+    if (current_nodes.length > forward_nodes.length) {
+      const forward_nodes_diff = _.differenceBy(
+        current_nodes,
+        forward_nodes,
+        "id"
+      );
+      data.nodes.remove(forward_nodes_diff);
+    } else {
+      data.nodes.update(forward_nodes);
+    }
+    if (current_edges.length > forward_edges.length) {
+      const forward_edges_diff = _.differenceBy(
+        current_edges,
+        forward_edges,
+        "id"
+      );
+      data.edges.remove(forward_edges_diff);
+    } else {
+      data.edges.update(forward_edges);
+    }
+    // recover event on
+    data.nodes.on("*", change_history_back);
+    data.edges.on("*", change_history_back);
+    history_list_back.unshift({
+      nodes_his: history_list_forward[0].nodes_his,
+      edges_his: history_list_forward[0].edges_his
+    });
+    // history_list_forward
+    history_list_forward.shift();
+        // apply css
+    css_for_manipulation();
+  }
+};
 
 function shake(evt){
   network.setOptions(
@@ -367,14 +364,14 @@ function change_group(evt){
 }
 
 $(document).ready(function() {
-              // apply css
-  //css_for_manipulation();
+  css_for_manipulation();
   $("#save-sele").on("click", saveselection);
-  //$("#btn-undo").on("click", undo);
-  //$("#btn-redo").on("click", redo);
   $("#extract-positions").on("click", savegraph);
   $("#shake-up").on("click", shake);
   document.getElementById("selected-charge").addEventListener("change", change_group);
   var data = load_charge(document.getElementById("selected-charge").value);
+  history(data); // Initialize history for the data
+  $("#btn-undo").on("click", undo);
+  $("#btn-redo").on("click", redo);
   draw(data);
 });
